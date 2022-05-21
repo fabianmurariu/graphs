@@ -31,8 +31,7 @@ trait Graph[F[_], G[_, _]]:
 object Graph:
   def apply[F[_], G[_, _]](using g: Graph[F, G]): Graph[F, G] = g
 
-
 trait Support[F[_]]
 
 object Support:
-    given nopeId:Support[Id] = new Support[Id]{}
+  given nopeId: Support[Id] = new Support[Id] {}
