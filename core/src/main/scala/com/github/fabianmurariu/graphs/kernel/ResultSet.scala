@@ -20,10 +20,19 @@ import cats.Applicative
 import scala.collection.Factory
 
 sealed trait ResultSet[F[_], O]:
-  def to[C1](factory: Factory[O, C1]): F[C1]
-  def toList = to(List)
-  def toVector = to(Vector)
+  def to[C1](factory: Factory[O, C1])(using Applicative[F]): F[C1]
+  def toList(using Applicative[F]) = to(List)
+  def toVector(using Applicative[F]) = to(Vector)
+  def ++(other: ResultSet[F, O]): ResultSet[F, O] =
+    (this, other) match {
+      case (IterableResultSet(vs), IterableResultSet(vsOther)) =>
+        IterableResultSet(vs ++ vsOther)
+    }
 
-case class IterableResultSet[F[_]: Applicative, O](vs: Iterable[O])
-    extends ResultSet[F, O]:
-  def to[C1](factory: Factory[O, C1]) = Applicative[F].pure(vs.to[C1](factory))
+object ResultSet:
+  def fromIter[F[_], O](vs: Iterable[O]): ResultSet[F, O] =
+    IterableResultSet(vs)
+
+case class IterableResultSet[F[_], O](vs: Iterable[O]) extends ResultSet[F, O]:
+  def to[C1](factory: Factory[O, C1])(using Applicative[F]) =
+    Applicative[F].pure(vs.to[C1](factory))

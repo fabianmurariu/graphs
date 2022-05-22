@@ -16,13 +16,13 @@
 
 package com.github.fabianmurariu.graphs.kernel
 
-import org.scalacheck.Prop._
+import org.scalacheck.Prop.{forAll, propBoolean}
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
 import com.github.fabianmurariu.graphs.kernel.ImmutableGraph
 import cats.Id
 
-class ImmutableGraphSuite extends munit.ScalaCheckSuite:
+class ImmutableGraphSuite extends munit.ScalaCheckSuite {
   property("it can insert all vertices and get them back") {
     forAll { (vs: Set[Int]) =>
       val g = Graph[Id, ImmutableGraph].empty[Int, String]
@@ -31,4 +31,25 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite:
 
       assertEquals(gOut.vertices.to(Vector), vs.toVector)
     }
+
   }
+
+  property("it can create a path from a list of nodes") {
+    forAll { (vs: Set[Int]) =>
+      vs.nonEmpty ==> {
+
+        val vec = vs.toVector
+        val pairs = vec.zip(vec.tail :+ vec.head)
+
+        val g = pairs.foldLeft(Graph[Id, ImmutableGraph].empty[Int, String]) {
+          case (g, (src, dst)) =>
+            g.addEdge(src, s"${src}_${dst}", dst)
+        }
+
+        pairs.forall { case (src, dst) =>
+          g.neighbours(src).to(List) == List(dst) 
+        }
+      }
+    }
+  }
+}

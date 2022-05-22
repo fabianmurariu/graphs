@@ -20,11 +20,20 @@ import cats.Id
 
 trait Graph[F[_], G[_, _]]:
   extension [V, E](g: G[V, E])
-    def neighbours(v: V): ResultSet[F, (V, E, V)]
+    def out(v: V): ResultSet[F, V]
+    def into(v: V): ResultSet[F, V]
+    def neighbours(v: V): ResultSet[F, V]
+
+    def outE(v: V): ResultSet[F, (E, V)]
+    def intoE(v: V): ResultSet[F, (E, V)]
+    def neighboursE(v: V): ResultSet[F, (E, V)]
+
+    def findV(v: V): ResultSet[F, V]
+    def edges(src: V, dst: V): ResultSet[F, (V, E, V)]
+    def vertices: ResultSet[F, V]
+
     def addVertex(v: V): F[G[V, E]]
     def addEdge(src: V, e: E, dst: V): F[G[V, E]]
-    def vertices: ResultSet[F, V]
-    def edge(src: V, dst: V): ResultSet[F, (V, E, V)]
 
   def empty[V, E]: F[G[V, E]]
 

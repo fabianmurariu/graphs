@@ -15,10 +15,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 // publish website from this branch
 ThisBuild / tlSitePublishBranch := Some("main")
 
-val Scala213 = "2.13.8"
 val Scala3 = "3.1.1"
-// ThisBuild / crossScalaVersions := Seq(Scala213, "3.1.1")
-// ThisBuild / scalaVersion := Scala213 // the default Scala
 ThisBuild / scalaVersion := Scala3 // the default Scala
 
 lazy val root = tlCrossRootProject.aggregate(core)
