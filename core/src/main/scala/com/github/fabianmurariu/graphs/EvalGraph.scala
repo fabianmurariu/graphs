@@ -36,7 +36,9 @@ trait QueryOps[M[_]: Applicative]:
     FreeT.liftF[[X] =>> Query[V, E, X], M, E](NewEdge(src, e, dst))
 
 object QueryOps:
-  def pure: QueryOps[Id] = new QueryOps[Id] {}
+  def ops[F[_]:Applicative]: QueryOps[F] = new QueryOps[F] {}
+  def pure = ops[Id]
 
 trait EvalGraph[G[_, _]]:
   extension [V, E](g: G[V, E]) def eval[M[_]]: (([X] =>> Query[V, E, X]) ~> M)
+

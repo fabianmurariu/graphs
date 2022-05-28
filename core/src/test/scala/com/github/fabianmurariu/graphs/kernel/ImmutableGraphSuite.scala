@@ -36,20 +36,44 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite {
 
   property("it can create a path from a list of nodes") {
     forAll { (vs: Set[Int]) =>
-      vs.nonEmpty ==> {
+      if (vs.nonEmpty) {
 
-        val vec = vs.toVector
-        val pairs = vec.zip(vec.tail :+ vec.head)
+        val g = linkPath[ImmutableGraph, Int](vs)
 
-        val g = pairs.foldLeft(Graph[Id, ImmutableGraph].empty[Int, String]) {
-          case (g, (src, dst)) =>
-            g.addEdge(src, s"${src}_${dst}", dst)
-        }
+        assert(g.edges.to(List).nonEmpty)
 
-        pairs.forall { case (src, dst) =>
-          g.neighbours(src).to(List) == List(dst) 
-        }
       }
     }
+  }
+
+  test("a graph with a single vertex connected to itself") {
+    val g = linkPath[ImmutableGraph, Int](Set(0))
+    assertEquals(g.out(0).to(List), List(0))
+  }
+
+  test("a graph with a two vertices connected to in a loop") {
+    val g = linkPath[ImmutableGraph, Int](Set(0, 1))
+    assertEquals(g.out(0).to(List), List(1))
+    assertEquals(g.out(1).to(List), List(0))
+    assertEquals(g.into(0).to(List), List(1))
+    assertEquals(g.into(1).to(List), List(0))
+  }
+
+  def linkPath[G[_, _], V](vs: Set[V])(using Graph[Id, G]): G[V, String] = {
+
+    val vec = vs.toVector
+    val pairs = vec.zip(vec.tail :+ vec.head)
+
+    val g = pairs.foldLeft(Graph[Id, G].empty[V, String]) {
+      case (g, (src, dst)) =>
+        g.addEdge(src, s"${src}_${dst}", dst)
+    }
+
+    pairs.foreach { case (src, dst) =>
+      g.out(src).to(List) == List(dst)
+      assertEquals(g.out(src).to(List), List(dst))
+      assertEquals(g.into(dst).to(List), List(src))
+    }
+    g
   }
 }

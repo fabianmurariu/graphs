@@ -39,40 +39,56 @@ object ImmutableGraph:
   ): Graph[F, ImmutableGraph] with
     extension [V, E](g: ImmutableGraph[V, E])
 
-      def edges(src: V, dst: V): ResultSet[F, (V, E, V)] = ???
+      def edges(src: V, dst: V): ResultSet[F, (V, E, V)] = 
+        ResultSet.fromIter(g.vs.getOrElse(src, Links()).out.get(dst).map(e => (src, e, dst)))
       def findV(v: V): ResultSet[F, V] = ???
-      def intoE(v: V): ResultSet[F, (E, V)] = ???
-      def neighbours(v: V): ResultSet[F, V] = 
+      def intoE(v: V): ResultSet[F, (V, E)] =
+        ResultSet.fromIter(g.vs.getOrElse(v, Links()).into)
+      def neighbours(v: V): ResultSet[F, V] =
         into(v) ++ out(v)
-      def neighboursE(v: V): ResultSet[F, (E, V)] = ???
+      def neighboursE(v: V): ResultSet[F, (V, E)] =
+        outE(v) ++ intoE(v)
       def out(v: V): ResultSet[F, V] =
-        ResultSet.fromIter[F, V](g.vs.view.flatMap { case (_, links) =>
-          links.out.keySet
-        })
+        ResultSet.fromIter[F, V](g.vs.getOrElse(v, Links()).out.keySet)
 
-      def into(v: V): ResultSet[F, V] = 
-        ResultSet.fromIter[F, V](g.vs.view.flatMap { case (_, links) =>
-          links.into.keySet
-        })
-      def outE(v: V): ResultSet[F, (E, V)] = ???
+      def into(v: V): ResultSet[F, V] =
+        ResultSet.fromIter[F, V](g.vs.getOrElse(v, Links()).into.keySet)
+      def outE(v: V): ResultSet[F, (V, E)] =
+        ResultSet.fromIter(g.vs.getOrElse(v, Links()).out)
       def addVertex(v: V): F[ImmutableGraph[V, E]] =
-        fromMap(g.vs.updated(v, Links()))
+        fromMap(g.vs.updatedWith(v) {
+          case None   => Some(Links())
+          case exists => exists
+        })
 
-      def addEdge(src: V, e: E, dst: V): F[ImmutableGraph[V, E]] =
-        fromMap(
-          g.vs
-            .updatedWith(src) {
-              case Some(links) => Some(links.addOutEdge(e, dst))
-              case None        => Some(Links(Map(dst -> e)))
-            }
-            .updatedWith(dst) {
-              case Some(links) => Some(links.addInEdge(src, e))
-              case None        => Some(Links(into = Map(src -> e)))
-            }
-        )
+      def addEdge(src: V, e: E, dst: V): F[ImmutableGraph[V, E]] = {
+        val map1 = g.vs
+          .updatedWith(src) {
+            case Some(links) => Some(links.addOutEdge(e, dst))
+            case None        => Some(Links().addOutEdge(e, dst))
+          }
+
+        val map2 = map1
+          .updatedWith(dst) {
+            case Some(links) => Some(links.addInEdge(src, e))
+            case None        => Some(Links().addInEdge(src, e))
+          }
+
+        fromMap(map2)
+      }
 
       def vertices: ResultSet[F, V] =
         IterableResultSet(g.vs.keySet)
+
+      def edges: ResultSet[F, (V, E, V)] = {
+        val outEdges = g.vs.view.map { case (src, links) =>
+          links.out.map { case (dst: V, e) => (src, e, dst) }
+        }.flatten
+        val inEdges = g.vs.view.map { case (dst, links) =>
+          links.into.map { case (src: V, e) => (dst, e, src) }
+        }.flatten
+        IterableResultSet(inEdges ++ outEdges)
+      }
     def empty[V, E]: F[ImmutableGraph[V, E]] =
       fromMap(Map.empty)
 

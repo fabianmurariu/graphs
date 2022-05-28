@@ -24,13 +24,14 @@ trait Graph[F[_], G[_, _]]:
     def into(v: V): ResultSet[F, V]
     def neighbours(v: V): ResultSet[F, V]
 
-    def outE(v: V): ResultSet[F, (E, V)]
-    def intoE(v: V): ResultSet[F, (E, V)]
-    def neighboursE(v: V): ResultSet[F, (E, V)]
+    def outE(v: V): ResultSet[F, (V, E)]
+    def intoE(v: V): ResultSet[F, (V, E)]
+    def neighboursE(v: V): ResultSet[F, (V, E)]
 
     def findV(v: V): ResultSet[F, V]
     def edges(src: V, dst: V): ResultSet[F, (V, E, V)]
     def vertices: ResultSet[F, V]
+    def edges: ResultSet[F, (V, E, V)]
 
     def addVertex(v: V): F[G[V, E]]
     def addEdge(src: V, e: E, dst: V): F[G[V, E]]
