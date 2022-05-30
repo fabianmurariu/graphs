@@ -30,6 +30,12 @@ final case class Links[V, E](
     self.copy(out = out.updated(dst, e))
   def addInEdge(src: V, e: E): Links[V, E] =
     self.copy(into = into.updated(src, e))
+
+  def removeOut(v: V): Links[V, E] =
+    self.copy(out = out - v)
+
+  def removeInto(v: V): Links[V, E] =
+    self.copy(into = into - v)
 }
 
 object ImmutableGraph:
@@ -39,9 +45,16 @@ object ImmutableGraph:
   ): Graph[F, ImmutableGraph] with
     extension [V, E](g: ImmutableGraph[V, E])
 
-      def edges(src: V, dst: V): ResultSet[F, (V, E, V)] = 
-        ResultSet.fromIter(g.vs.getOrElse(src, Links()).out.get(dst).map(e => (src, e, dst)))
-      def findV(v: V): ResultSet[F, V] = ???
+      def edges(src: V, dst: V): ResultSet[F, (V, E, V)] =
+        ResultSet.fromIter(
+          g.vs.getOrElse(src, Links()).out.get(dst).map(e => (src, e, dst))
+        )
+
+      def contains(v: V): F[Boolean] =
+        F.pure(g.vs.contains(v))
+      def isEmpty: F[Boolean] =
+        F.pure(g.vs.isEmpty)
+
       def intoE(v: V): ResultSet[F, (V, E)] =
         ResultSet.fromIter(g.vs.getOrElse(v, Links()).into)
       def neighbours(v: V): ResultSet[F, V] =
@@ -77,6 +90,42 @@ object ImmutableGraph:
         fromMap(map2)
       }
 
+      def removeVertex(v: V): F[ImmutableGraph[V, E]] = {
+        g.vs.get(v) match {
+          case None => F.pure(g)
+          case Some(links) =>
+            val g1 = links.into.foldLeft(g.vs) { case (vs, (src, _)) =>
+              vs.updatedWith(src) {
+                case None        => None
+                case Some(links) => Some(links.removeOut(v).removeInto(v))
+              }
+            }
+
+            val g2 = links.out.foldLeft(g1){ case (vs, (dst, _)) => 
+              vs.updatedWith(dst){
+                case None => None
+                case Some(links) => Some(links.removeOut(v).removeInto(v))
+              }
+            }
+
+            fromMap(g2 - v)
+        }
+      }
+
+      def removeEdge(src: V, dst: V): F[ImmutableGraph[V, E]] = {
+        val g1 = g.vs
+          .updatedWith(src) {
+            case None           => None
+            case Some(srcLinks) => Some(srcLinks.removeOut(dst))
+          }
+          .updatedWith(dst) {
+            case None           => None
+            case Some(dstLinks) => Some(dstLinks.removeInto(src))
+          }
+
+        fromMap(g1)
+      }
+
       def vertices: ResultSet[F, V] =
         IterableResultSet(g.vs.keySet)
 
@@ -93,4 +142,4 @@ object ImmutableGraph:
       fromMap(Map.empty)
 
     def fromMap[V, E](m: Map[V, Links[V, E]]): F[ImmutableGraph[V, E]] =
-      Applicative[F].pure(ImmutableGraph(m))
+      F.pure(ImmutableGraph(m))

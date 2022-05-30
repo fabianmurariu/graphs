@@ -29,6 +29,7 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite {
 
       val gOut = vs.foldLeft(g) { (g, v) => g.addVertex(v) }
 
+      vs.foreach { v => assert(gOut.contains(v)) }
       assertEquals(gOut.vertices.to(Vector), vs.toVector)
     }
 
@@ -44,6 +45,74 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite {
 
       }
     }
+  }
+
+  property("a vector removed is not pointed at by anyone") {
+    forAll { (vs: Set[Int]) =>
+      if (vs.nonEmpty) {
+
+        val g = linkPath[ImmutableGraph, Int](vs).removeVertex(vs.head)
+
+        val vertices = g.edges.toSet.flatMap { case (v1, _, v2) => Set(v1, v2) }
+
+        assertEquals(g.vertices.toSet, vs - vs.head)
+        assert(!vertices(vs.head))
+      }
+    }
+  }
+
+  property("single edge graph remove vertex is empty") {
+    forAll { (i: Int) =>
+      val emptyGraph = Graph[Id, ImmutableGraph].empty[Int, String]
+      assert(emptyGraph.isEmpty)
+      val g = emptyGraph.addVertex(i).removeVertex(i)
+      assertEquals(g, emptyGraph)
+      assert(g.isEmpty)
+    }
+  }
+
+  property(
+    "removing center vertex in a star graph leaves it with no edges only vertices"
+  ) {
+    forAll { (vs: Set[Int]) =>
+      if (vs.nonEmpty) {
+        val g =
+          linkStart[ImmutableGraph, Int](vs.head, vs.tail).removeVertex(vs.head)
+        assertEquals(g.edges.toSet, Set())
+        assertEquals(g.vertices.toSet, vs.tail)
+      }
+    }
+  }
+
+  property(
+    "in a star graph the center vertex out neighbours are all the other nodes"
+  ) {
+    forAll { (vs: Set[Int]) =>
+      if (vs.nonEmpty) {
+        val c = vs.head
+        val rest = vs.tail
+
+        val g =
+          linkStart[ImmutableGraph, Int](c, rest)
+        assertEquals(g.out(c).toSet, rest)
+
+        if (rest.nonEmpty)
+          assertEquals(rest.flatMap(v => g.into(v).toSet), Set(c))
+
+        assertEquals(g.vertices.toSet, vs)
+      }
+    }
+  }
+
+  test("remove vertex") {
+    val vs = Set(0, 1, -1)
+
+    val g = linkPath[ImmutableGraph, Int](vs).removeVertex(0)
+
+    val vertices = g.edges.toSet.flatMap { case (v1, _, v2) => Set(v1, v2) }
+
+    assertEquals(g.vertices.toSet, Set(1, -1))
+    assert(!vertices(0))
   }
 
   test("a graph with a single vertex connected to itself") {
@@ -66,7 +135,7 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite {
 
     val g = pairs.foldLeft(Graph[Id, G].empty[V, String]) {
       case (g, (src, dst)) =>
-        g.addEdge(src, s"${src}_${dst}", dst)
+        g.addVertex(src).addVertex(dst).addEdge(src, s"${src}_${dst}", dst)
     }
 
     pairs.foreach { case (src, dst) =>
@@ -74,6 +143,18 @@ class ImmutableGraphSuite extends munit.ScalaCheckSuite {
       assertEquals(g.out(src).to(List), List(dst))
       assertEquals(g.into(dst).to(List), List(src))
     }
+    g
+  }
+
+  def linkStart[G[_, _], V](first: V, rest: Set[V])(using
+      Graph[Id, G]
+  ): G[V, String] = {
+
+    val g = rest.foldLeft(Graph[Id, G].empty[V, String].addVertex(first)) {
+      (g, dst) =>
+        g.addVertex(dst).addEdge(first, s"${first}_${dst}", dst)
+    }
+
     g
   }
 }

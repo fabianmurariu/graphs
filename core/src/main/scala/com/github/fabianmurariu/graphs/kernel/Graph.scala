@@ -28,13 +28,18 @@ trait Graph[F[_], G[_, _]]:
     def intoE(v: V): ResultSet[F, (V, E)]
     def neighboursE(v: V): ResultSet[F, (V, E)]
 
-    def findV(v: V): ResultSet[F, V]
+    def contains(v: V): F[Boolean]
+    def isEmpty: F[Boolean]
+
     def edges(src: V, dst: V): ResultSet[F, (V, E, V)]
     def vertices: ResultSet[F, V]
     def edges: ResultSet[F, (V, E, V)]
 
     def addVertex(v: V): F[G[V, E]]
     def addEdge(src: V, e: E, dst: V): F[G[V, E]]
+
+    def removeVertex(v:V): F[G[V, E]]
+    def removeEdge(src: V, dst: V): F[G[V, E]]
 
   def empty[V, E]: F[G[V, E]]
 
