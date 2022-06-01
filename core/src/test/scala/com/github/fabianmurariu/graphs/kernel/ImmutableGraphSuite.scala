@@ -16,55 +16,49 @@
 
 package com.github.fabianmurariu.graphs.kernel
 
-import org.scalacheck.Prop.{forAll, propBoolean}
+import cats.Id
+import cats.Monad
+import cats.MonadError
+import cats.syntax.all._
+import com.github.fabianmurariu.graphs.kernel.ImmutableGraph
+import munit.CatsEffectSuite
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
-import com.github.fabianmurariu.graphs.kernel.ImmutableGraph
-import cats.Id
+import org.scalacheck.Prop.forAll
+import org.scalacheck.Prop.propBoolean
+import org.scalacheck.effect.PropF
+
+class ImmutableGraphSuiteV2 extends GraphSuite[ImmutableGraph, Id, Int]
+
+// this is a hack
+given idMonadError(using F: Monad[Id]): MonadError[Id, Throwable] =
+  new MonadError[Id, Throwable] {
+    def pure[A](x: A): cats.Id[A] = F.pure(x)
+
+    // Members declared in cats.ApplicativeError
+    def handleErrorWith[A](fa: cats.Id[A])(
+        f: Throwable => cats.Id[A]
+    ): cats.Id[A] = try {
+      fa
+    } catch {
+      case t: Throwable => f(t)
+    }
+    def raiseError[A](e: Throwable): cats.Id[A] = throw e
+
+    // Members declared in cats.FlatMap
+    def flatMap[A, B](fa: cats.Id[A])(f: A => cats.Id[B]): cats.Id[B] =
+      F.flatMap(fa)(f)
+    def tailRecM[A, B](a: A)(f: A => cats.Id[Either[A, B]]): cats.Id[B] =
+      F.tailRecM(a)(f)
+
+  }
 
 class ImmutableGraphSuite extends munit.ScalaCheckSuite {
-  property("it can insert all vertices and get them back") {
-    forAll { (vs: Set[Int]) =>
-      val g = Graph[Id, ImmutableGraph].empty[Int, String]
-
-      val gOut = vs.foldLeft(g) { (g, v) => g.addVertex(v) }
-
-      vs.foreach { v => assert(gOut.contains(v)) }
-      assertEquals(gOut.vertices.to(Vector), vs.toVector)
-    }
-
-  }
-
-  property("it can create a path from a list of nodes") {
-    forAll { (vs: Set[Int]) =>
-      if (vs.nonEmpty) {
-
-        val g = linkPath[ImmutableGraph, Int](vs)
-
-        assert(g.edges.to(List).nonEmpty)
-
-      }
-    }
-  }
-
-  property("a vector removed is not pointed at by anyone") {
-    forAll { (vs: Set[Int]) =>
-      if (vs.nonEmpty) {
-
-        val g = linkPath[ImmutableGraph, Int](vs).removeVertex(vs.head)
-
-        val vertices = g.edges.toSet.flatMap { case (v1, _, v2) => Set(v1, v2) }
-
-        assertEquals(g.vertices.toSet, vs - vs.head)
-        assert(!vertices(vs.head))
-      }
-    }
-  }
 
   property("single edge graph remove vertex is empty") {
     forAll { (i: Int) =>
       val emptyGraph = Graph[Id, ImmutableGraph].empty[Int, String]
-      assert(emptyGraph.isEmpty)
+      assert(Graph[Id, ImmutableGraph].isEmpty(emptyGraph))
       val g = emptyGraph.addVertex(i).removeVertex(i)
       assertEquals(g, emptyGraph)
       assert(g.isEmpty)
