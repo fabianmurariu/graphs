@@ -18,20 +18,26 @@ package com.github.fabianmurariu.graphs.kernel
 
 import cats.Applicative
 import scala.collection.Factory
-import cats.Functor
+/**
+  * Result Set
+  */
+sealed trait Rs[F[_], O] {
+  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]): F[C1]
+  def toList(implicit F: Applicative[F]) = to(List)
+  def toVector(implicit F: Applicative[F]) = to(Vector)
+  def toSet(implicit F: Applicative[F]) = to(Set)
 
-sealed trait ResultSet[F[_], O]:
-  def to[C1](factory: Factory[O, C1])(using Applicative[F]): F[C1]
-  def toList(using Applicative[F]) = to(List)
-  def toVector(using Applicative[F]) = to(Vector)
-  def toSet(using Applicative[F]) = to(Set)
-
-  def map[A](f: O => A): ResultSet[F, A] = this match {
-    case empty@EmptyResultSet() => empty.asInstanceOf[ResultSet[F, A]]
-    case IterableResultSet(vs) => IterableResultSet(vs.map(f))
+  def map[A](f: O => A): Rs[F, A] = this match {
+    case empty @ EmptyResultSet() => empty.asInstanceOf[Rs[F, A]]
+    case IterableResultSet(vs)    => IterableResultSet(vs.map(f))
   }
 
-  def ++(other: ResultSet[F, O]): ResultSet[F, O] =
+  def size(implicit F:Applicative[F]): F[Int] = this match {
+    case EmptyResultSet() => F.pure(0)
+    case IterableResultSet(vs)    => F.pure(vs.size)
+  }
+
+  def ++(other: Rs[F, O]): Rs[F, O] =
     (this, other) match {
       case (IterableResultSet(vs), IterableResultSet(vsOther)) =>
         IterableResultSet(vs ++ vsOther)
@@ -39,18 +45,19 @@ sealed trait ResultSet[F[_], O]:
       case (_: EmptyResultSet[F, O], right: IterableResultSet[F, O]) => right
       case (_: EmptyResultSet[F, O], empty: EmptyResultSet[F, O])    => empty
     }
+}
 
-object ResultSet:
-  def fromIter[F[_], O](vs: Iterable[O]): ResultSet[F, O] =
+object Rs {
+  def fromIter[F[_], O](vs: Iterable[O]): Rs[F, O] =
     IterableResultSet(vs)
+}
 
-case class EmptyResultSet[F[_], O]() extends ResultSet[F, O] {
-  def to[C1](factory: Factory[O, C1])(using Applicative[F]) =
+case class EmptyResultSet[F[_], O]() extends Rs[F, O] {
+  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]) =
     Applicative[F].pure(List.empty.to[C1](factory))
 }
 
-case class IterableResultSet[F[_], O](vs: Iterable[O]) extends ResultSet[F, O]:
-  def to[C1](factory: Factory[O, C1])(using Applicative[F]) =
+case class IterableResultSet[F[_], O](vs: Iterable[O]) extends Rs[F, O] {
+  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]) =
     Applicative[F].pure(vs.to[C1](factory))
-
-  
+}

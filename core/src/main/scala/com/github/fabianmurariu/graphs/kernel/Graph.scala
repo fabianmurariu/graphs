@@ -16,37 +16,59 @@
 
 package com.github.fabianmurariu.graphs.kernel
 
-import cats.Id
+import simulacrum.typeclass
+import scala.annotation.implicitNotFound
 
-trait Graph[F[_], G[_, _]]:
-  extension [V, E](g: G[V, E])
-    def out(v: V): ResultSet[F, V]
-    def into(v: V): ResultSet[F, V]
-    def neighbours(v: V): ResultSet[F, V]
+@implicitNotFound("Could not find an instance of Graph for ${G}")
+@typeclass
+trait Graph[G[_, _]] extends Serializable {
+  def neighbours[V, E](g: G[V, E])(v: V): Iterable[V]
+  def isEmpty[V, E](g: G[V, E]): Boolean
+}
 
-    def outE(v: V): ResultSet[F, (V, E)]
-    def intoE(v: V): ResultSet[F, (V, E)]
-    def neighboursE(v: V): ResultSet[F, (V, E)]
+object Graph {
+  /* ======================================================================== */
+  /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
+  /* ======================================================================== */
 
-    def contains(v: V): F[Boolean]
-    def isEmpty: F[Boolean]
+  /**
+   * Summon an instance of [[Graph]] for `G`.
+   */
+  @inline def apply[G[_, _]](implicit instance: Graph[G]): Graph[G] = instance
 
-    def edges(src: V, dst: V): ResultSet[F, (V, E, V)]
-    def vertices: ResultSet[F, V]
-    def edges: ResultSet[F, (V, E, V)]
+  @deprecated("Use graph.syntax object imports", "2.2.0")
+  object ops {
+    implicit def toAllGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): AllOps[G, A, B] {
+      type TypeClassType = Graph[G]
+    } = new AllOps[G, A, B] {
+      type TypeClassType = Graph[G]
+      val self: G[A, B] = target
+      val typeClassInstance: TypeClassType = tc
+    }
+  }
+  trait Ops[G[_, _], A, B] extends Serializable {
+    type TypeClassType <: Graph[G]
+    def self: G[A, B]
+    val typeClassInstance: TypeClassType
+    def neighbours(v: A): Iterable[A] = typeClassInstance.neighbours[A, B](self)(v)
+    def isEmpty: Boolean = typeClassInstance.isEmpty[A, B](self)
+  }
+  trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
+  trait ToGraphOps extends Serializable {
+    implicit def toGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): Ops[G, A, B] {
+      type TypeClassType = Graph[G]
+    } = new Ops[G, A, B] {
+      type TypeClassType = Graph[G]
+      val self: G[A, B] = target
+      val typeClassInstance: TypeClassType = tc
+    }
+  }
+  @deprecated("Use graph.syntax object imports", "2.2.0")
+  object nonInheritedOps extends ToGraphOps
 
-    def addVertex(v: V): F[G[V, E]]
-    def addEdge(src: V, e: E, dst: V): F[G[V, E]]
+  /* ======================================================================== */
+  /* END OF SIMULACRUM-MANAGED CODE                                           */
+  /* ======================================================================== */
 
-    def removeVertex(v:V): F[G[V, E]]
-    def removeEdge(src: V, dst: V): F[G[V, E]]
+}
 
-  def empty[V, E]: F[G[V, E]]
-
-object Graph:
-  def apply[F[_], G[_, _]](using g: Graph[F, G]): Graph[F, G] = g
-
-trait Support[F[_]]
-
-object Support:
-  given nopeId: Support[Id] = new Support[Id] {}

@@ -1,5 +1,6 @@
 // https://typelevel.org/sbt-typelevel/faq.html#what-is-a-base-version-anyway
 ThisBuild / tlBaseVersion := "0.0" // your current series x.y
+ThisBuild / scalafixDependencies += "org.typelevel" %% "simulacrum-scalafix" % "0.5.3"
 
 ThisBuild / organization := "com.github.fabianmurariu"
 ThisBuild / organizationName := "32Bytes Software LTD"
@@ -15,16 +16,37 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 // publish website from this branch
 ThisBuild / tlSitePublishBranch := Some("main")
 
+val Scala213 = "2.13.8"
 val Scala3 = "3.1.1"
-ThisBuild / scalaVersion := Scala3 // the default Scala
+ThisBuild / crossScalaVersions := Seq(Scala213, Scala3)
+ThisBuild / scalaVersion := Scala213 // the default Scala
 
-lazy val root = tlCrossRootProject.aggregate(core)
+lazy val root = tlCrossRootProject.aggregate(core, benchmarks)
+
+lazy val simulacrumSettings = Seq(
+  libraryDependencies ++= (if (tlIsScala3.value) Nil else Seq(compilerPlugin(scalafixSemanticdb))),
+  scalacOptions ++= (
+    if (tlIsScala3.value) Nil
+    else Seq(s"-P:semanticdb:targetroot:${baseDirectory.value}/target/.semanticdb", "-Yrangepos")
+  ),
+  libraryDependencies += "org.typelevel" %% "simulacrum-scalafix-annotations" % "0.5.4"
+)
+
+lazy val macroSettings = Seq(
+  libraryDependencies ++= {
+    if (tlIsScala3.value)
+      Nil
+    else
+      Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided)
+  }
+)
 
 lazy val core = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
+  .settings(simulacrumSettings, macroSettings)
   .settings(
-    name := "graphs",
+    name := "core",
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % "2.7.0",
       "org.typelevel" %%% "cats-free" % "2.7.0",
@@ -34,6 +56,16 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "munit-cats-effect-3" % "1.0.7" % Test,
       "org.typelevel" %%% "scalacheck-effect-munit" % "1.0.4" % Test
     )
+  )
+
+lazy val benchmarks = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("benchmarks"))
+  .settings(simulacrumSettings, macroSettings)
+  .enablePlugins(JmhPlugin)
+  .dependsOn(core)
+  .settings(
+    name := "benchmarks"
   )
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)
