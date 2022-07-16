@@ -3,11 +3,20 @@ package com.github.fabianmurariu.graphs.data
 import com.github.fabianmurariu.graphs.kernel.BaseGraph
 import cats.Id
 import com.github.fabianmurariu.graphs.kernel.Rs
+import com.github.fabianmurariu.graphs.kernel.IdResultSet
+import scala.collection.immutable.ArraySeq
 
 class VecIndexGraph[V, E](vTable: LookupTable[V], store: NodeIndex[V, E])
     extends BaseGraph[Id, V, E] {
 
-  override def out(v: V): Rs[Id, (V, E)] = ???
+  override def out(v: V): Rs[Id, (V, E)] = {
+    store.getVertex(vTable.getId(v)) match {
+      case Entry(_, _, out, _) =>
+        IdResultSet(out.vs, out.props, store)
+      case _ => Rs.empty[Id, (V, E)]
+    }
+
+  }
 
   override def into(v: V): Rs[Id, (V, E)] = ???
 
@@ -34,7 +43,10 @@ class VecIndexGraph[V, E](vTable: LookupTable[V], store: NodeIndex[V, E])
   override def removeEdge(src: V, dst: V): BaseGraph[Id, V, E] = ???
 }
 
-trait AdjacencyStore[E]
+trait AdjacencyStore[E] {
+  def vs: IndexedSeq[Int]
+  def props: IndexedSeq[E]
+}
 
 case class VecStore[E](vs: Vector[Int], props: Vector[E])
     extends AdjacencyStore[E]
@@ -58,7 +70,7 @@ trait LookupTable[V] {
   def getId(v: V): Int
 }
 
-sealed trait VertexEntry[V, E]
+sealed trait VertexEntry[V, E] 
 
 case object Empty extends VertexEntry[Nothing, Nothing]
 
