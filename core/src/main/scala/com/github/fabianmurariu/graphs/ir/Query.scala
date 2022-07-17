@@ -68,7 +68,7 @@ case class Return[V, E](
 
   def map(f: Row => Row): Query[V, E, Row] = {
     val key = new Row
-    val next = f(key) // we throw away stuff ???
+    val next = f(key) 
     merge(next -> LogicalNode.Select(rs.map(LogicalNode.LNRef(_))))
   }
 }
@@ -99,8 +99,4 @@ object LogicalNode {
   case class ExpandOut[A](ln: LogicalNode, e: Option[A]) extends LogicalNode
   case class NodeFilter[A](ln: LogicalNode, v: Option[A]) extends LogicalNode
   case class Select(lns: Vector[LogicalNode]) extends LogicalNode
-}
-
-object QueryApp extends App {
-  println(Query.q.exprs)
 }

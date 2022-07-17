@@ -16,89 +16,86 @@
 
 package com.github.fabianmurariu.graphs.kernel
 
-import cats.Applicative
 import scala.collection.Factory
-import com.github.fabianmurariu.graphs.data.NodeIndex
-import scala.annotation.tailrec
 import scala.collection.mutable.Builder
-import com.github.fabianmurariu.graphs.data.Entry
+import scala.annotation.tailrec
 
 /** Result Set
   */
-sealed trait Rs[F[_], O] {
-  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]): F[C1]
-  def toList(implicit F: Applicative[F]) = to(List)
-  def toVector(implicit F: Applicative[F]) = to(Vector)
-  def toSet(implicit F: Applicative[F]) = to(Set)
+sealed trait Rs[O] {
+  def to[C1](factory: Factory[O, C1]): C1
+  def toList = to(List)
+  def toVector = to(Vector)
+  def toSet = to(Set)
 
-  def map[A](f: O => A): Rs[F, A] = this match {
-    case empty @ EmptyResultSet() => empty.asInstanceOf[Rs[F, A]]
-    case IterableResultSet(vs)    => IterableResultSet(vs.map(f))
+  def map[A](f: O => A): Rs[A] = this match {
+    case empty @ Rs.EmptyResultSet() => empty.asInstanceOf[Rs[A]]
+    case Rs.IterableResultSet(vs)    => Rs.IterableResultSet(vs.map(f))
+    case ids @ Rs.IdResultSet(_, _, _) =>
+      Rs.IterableResultSet(ids.to(Vector).map(f))
   }
 
-  def foldMap[B, A](b: B)(f: (B, O) => A): Rs[F, A] = {
-    ???
+  def size: Int = this match {
+    case Rs.EmptyResultSet()      => 0
+    case Rs.IterableResultSet(vs) => vs.size
+    case Rs.IdResultSet(vs, _, _) => vs.size
   }
 
-  def size(implicit F: Applicative[F]): F[Int] = this match {
-    case EmptyResultSet()      => F.pure(0)
-    case IterableResultSet(vs) => F.pure(vs.size)
-  }
-
-  def ++(other: Rs[F, O]): Rs[F, O] =
+  def ++(other: Rs[O]): Rs[O] =
     (this, other) match {
-      case (IterableResultSet(vs), IterableResultSet(vsOther)) =>
-        IterableResultSet(vs ++ vsOther)
-      case (left: Rs[F, O], _: EmptyResultSet[F, O])              => left
-      case (_: EmptyResultSet[F, O], right: Rs[F, O])             => right
+      case (Rs.IterableResultSet(vs), Rs.IterableResultSet(vsOther)) =>
+        Rs.IterableResultSet(vs ++ vsOther)
+      case (left: Rs[O], _: Rs.EmptyResultSet[O])  => left
+      case (_: Rs.EmptyResultSet[O], right: Rs[O]) => right
+      case (ids: Rs.IdResultSet[_, O] @unchecked, right) =>
+        Rs.IterableResultSet(ids.to(Vector)) ++ right
+      case (left, ids: Rs.IdResultSet[_, O] @unchecked) =>
+        left ++ Rs.IterableResultSet(ids.to(Vector))
     }
 }
 
 object Rs {
-  def fromIter[F[_], O](vs: Iterable[O]): Rs[F, O] =
+  def fromIter[O](vs: Iterable[O]): Rs[O] =
     IterableResultSet(vs)
 
-  def empty[F[_], O]: Rs[F, O] = EmptyResultSet()
-}
+  def empty[O]: Rs[O] = EmptyResultSet()
 
-case class EmptyResultSet[F[_], O]() extends Rs[F, O] {
-  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]) =
-    Applicative[F].pure(List.empty.to[C1](factory))
-}
+  case class EmptyResultSet[O]() extends Rs[O] {
+    def to[C1](factory: Factory[O, C1]) =
+      List.empty.to[C1](factory)
+  }
 
-case class IterableResultSet[F[_], O](vs: Iterable[O]) extends Rs[F, O] {
-  def to[C1](factory: Factory[O, C1])(implicit F: Applicative[F]) =
-    Applicative[F].pure(vs.to[C1](factory))
-}
+  case class IterableResultSet[O](vs: Iterable[O]) extends Rs[O] {
+    def to[C1](factory: Factory[O, C1]) =
+      vs.to[C1](factory)
+  }
 
-case class IdResultSet[F[_], V, E](
-    vs: IndexedSeq[Int],
-    e: IndexedSeq[E],
-    store: NodeIndex[V, E]
-) extends Rs[F, (V, E)] {
+  case class IdResultSet[E, O](
+      vs: IndexedSeq[Int],
+      e: IndexedSeq[E],
+      f: Int => O
+  ) extends Rs[O] {
 
-  override def to[C1](factory: Factory[(V, E), C1])(implicit
-      F: Applicative[F]
-  ): F[C1] = {
+    override def to[C1](factory: Factory[O, C1]): C1 = {
 
-    @tailrec
-    def loop(
-        b: Builder[(V, E), C1],
-        iter: Iterator[Int],
-        e: IndexedSeq[E],
-        i: Int
-    ): C1 = {
-      if (!iter.hasNext) b.result()
-      else {
-        val nextV = iter.next()
-        store.getVertex(nextV) match {
-          case Entry(_, v, _, _) =>
-            b += (v -> e(i))
+      @tailrec
+      def loop(
+          b: Builder[O, C1],
+          iter: Iterator[Int],
+          e: IndexedSeq[E],
+          i: Int
+      ): C1 = {
+        if (!iter.hasNext) b.result()
+        else {
+          val nextV = iter.next()
+          val o = f(nextV)
+          b += o
+          loop(b, iter, e, i + 1)
         }
-        loop(b, iter, e, i + 1)
       }
+      loop(factory.newBuilder, vs.iterator, e, 0)
     }
-    F.pure(loop(factory.newBuilder, vs.iterator, e, 0))
+
   }
 
 }
