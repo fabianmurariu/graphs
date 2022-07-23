@@ -35,6 +35,13 @@ sealed trait Rs[O] {
       Rs.IterableResultSet(ids.to(Vector).map(f))
   }
 
+  def foldLeft[B](b: B)(f: (B, O) => B): B = this match {
+    case Rs.IterableResultSet(vs) => vs.foldLeft(b)(f)
+    case ids: Rs.IdResultSet[_, O] =>
+      ids.vs.map(ids.f).foldLeft(b)(f)
+    case _ => b
+  }
+
   def size: Int = this match {
     case Rs.EmptyResultSet()      => 0
     case Rs.IterableResultSet(vs) => vs.size

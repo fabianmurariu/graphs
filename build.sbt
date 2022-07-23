@@ -66,7 +66,8 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
       "org.scalameta" %%% "munit" % "0.7.29" % Test,
       "org.scalameta" %%% "munit-scalacheck" % "0.7.29" % Test,
       "org.typelevel" %%% "munit-cats-effect-3" % "1.0.7" % Test,
-      "org.typelevel" %%% "scalacheck-effect-munit" % "1.0.4" % Test
+      "org.typelevel" %%% "scalacheck-effect-munit" % "1.0.4" % Test,
+      "org.scodec" %%% "scodec-core" % (if (scalaVersion.value.startsWith("2.")) "1.11.9" else "2.1.0")
     )
   )
 
