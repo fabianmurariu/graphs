@@ -13,6 +13,16 @@ trait LookupTable[M[_]] extends Serializable {
 }
 
 object LookupTable {
+  type ImmutableLookupTable[V] = Map[V, Int]
+
+  implicit val mapLookupTable: LookupTable[ImmutableLookupTable] =
+    new LookupTable[ImmutableLookupTable] {
+
+      override def lookup[A](m: ImmutableLookupTable[A])(a: A): Int = m(a)
+
+      override def empty[A]: ImmutableLookupTable[A] = Map.empty
+
+    }
   /* ======================================================================== */
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */

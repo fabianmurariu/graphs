@@ -22,7 +22,7 @@ import com.github.fabianmurariu.graphs.ir.{Query, Ref}
 
 @implicitNotFound("Could not find an instance of Graph for ${G}")
 @typeclass
-trait Graph[G[_, _]] extends Serializable with EvalGraph[G]{
+trait Graph[G[_, _]] extends Serializable {
   def out[V, E](g: G[V, E])(vs: Rs[V]): Rs[V]
   def in[V, E](g: G[V, E])(vs: Rs[V]): Rs[V]
 
@@ -36,8 +36,7 @@ trait Graph[G[_, _]] extends Serializable with EvalGraph[G]{
 
   def get[V, E](g: G[V, E])(v: V): Option[V]
 
-  // this should be implementable here
-  def eval[V, E, O <: Ref](g: G[V,E])(q: Query[V,E,O]): Rs[O] = ???
+  def empty[V, E]: G[V, E]
 }
 
 object Graph {
@@ -90,6 +89,9 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
+
+
 
 
 }

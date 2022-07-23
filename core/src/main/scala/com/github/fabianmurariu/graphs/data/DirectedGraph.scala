@@ -1,6 +1,5 @@
 package com.github.fabianmurariu.graphs.data
 
-import cats.Id
 import com.github.fabianmurariu.graphs.kernel.Rs
 import com.github.fabianmurariu.graphs.kernel.Rs.IdResultSet
 import LookupTable.ops._
@@ -13,7 +12,7 @@ import com.github.fabianmurariu.graphs.kernel.Graph
   * @param vTable
   * @param store
   */
-class UnsafeDirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
+case class DirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
     vTable: M[V],
     store: G[V, E]
 ) { self =>
@@ -68,58 +67,61 @@ class UnsafeDirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
 
   def vertices: Rs[V] = ???
 
-  def addEdge(src: V, dst: V, e: E): UnsafeDirectedGraph[V, E, M, G] = ???
+  def addEdge(src: V, dst: V, e: E): DirectedGraph[V, E, M, G] = ???
 
-  def addVertex(v: V): UnsafeDirectedGraph[V, E, M, G] = ???
+  def addVertex(v: V): DirectedGraph[V, E, M, G] = ???
 
-  def removeVertex(v: V): UnsafeDirectedGraph[V, E, M, G] = ???
+  def removeVertex(v: V): DirectedGraph[V, E, M, G] = ???
 
-  def removeEdge(src: V, dst: V): UnsafeDirectedGraph[V, E, M, G] = ???
+  def removeEdge(src: V, dst: V): DirectedGraph[V, E, M, G] = ???
 }
 
-object UnsafeDirectedGraph {
+object DirectedGraph {
 
   def empty[V, E, M[_]: LookupTable, G[_, _]: EntryIndex] =
-    new UnsafeDirectedGraph(
+    new DirectedGraph(
       LookupTable[M].empty[V],
       EntryIndex[G].empty[V, E]
     )
 
   implicit def graph[M[_]: LookupTable, GG[_, _]: EntryIndex]
-      : Graph[UnsafeDirectedGraph[*, *, M, GG]] =
-    new Graph[UnsafeDirectedGraph[*, *, M, GG]] {
+      : Graph[DirectedGraph[*, *, M, GG]] =
+    new Graph[DirectedGraph[*, *, M, GG]] {
 
-      override def out[V, E](g: UnsafeDirectedGraph[V, E, M, GG])(
+      def empty[V, E]: DirectedGraph[V, E, M, GG] = 
+        new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
+
+      override def out[V, E](g: DirectedGraph[V, E, M, GG])(
           vs: Rs[V]
       ): Rs[V] = ???
 
-      override def in[V, E](g: UnsafeDirectedGraph[V, E, M, GG])(
+      override def in[V, E](g: DirectedGraph[V, E, M, GG])(
           vs: Rs[V]
       ): Rs[V] = ???
 
-      override def isEmpty[V, E](g: UnsafeDirectedGraph[V, E, M, GG]): Boolean =
+      override def isEmpty[V, E](g: DirectedGraph[V, E, M, GG]): Boolean =
         ???
 
-      override def vertices[V, E](g: UnsafeDirectedGraph[V, E, M, GG]): Rs[V] =
-        ???
+      override def vertices[V, E](g: DirectedGraph[V, E, M, GG]): Rs[V] =
+        g.
 
-      override def addVertex[V, E](g: UnsafeDirectedGraph[V, E, M, GG])(
+      override def addVertex[V, E](g: DirectedGraph[V, E, M, GG])(
           v: V
-      ): UnsafeDirectedGraph[V, E, M, GG] = ???
+      ): DirectedGraph[V, E, M, GG] = ???
 
       override def addEdge[V, E](
-          g: UnsafeDirectedGraph[V, E, M, GG]
-      )(src: V, dst: V, e: E): UnsafeDirectedGraph[V, E, M, GG] = ???
+          g: DirectedGraph[V, E, M, GG]
+      )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = ???
 
-      override def removeVertex[V, E](g: UnsafeDirectedGraph[V, E, M, GG])(
+      override def removeVertex[V, E](g: DirectedGraph[V, E, M, GG])(
           v: V
-      ): UnsafeDirectedGraph[V, E, M, GG] = ???
+      ): DirectedGraph[V, E, M, GG] = ???
 
       override def removeEdge[V, E](
-          g: UnsafeDirectedGraph[V, E, M, GG]
-      )(src: V, dst: V, e: E): UnsafeDirectedGraph[V, E, M, GG] = ???
+          g: DirectedGraph[V, E, M, GG]
+      )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = ???
 
-      override def get[V, E](g: UnsafeDirectedGraph[V, E, M, GG])(
+      override def get[V, E](g: DirectedGraph[V, E, M, GG])(
           v: V
       ): Option[V] = ???
 
