@@ -19,6 +19,7 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
         g.addVertex(v)
       }
 
+      assertEquals(g.vertices.to(Vector).size, vs.size)
       assertEquals(g.vertices.to(Set), vs)
 
     }

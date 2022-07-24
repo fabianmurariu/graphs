@@ -13,20 +13,20 @@ import com.github.fabianmurariu.graphs.kernel.Graph
   * @param store
   */
 case class DirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
-    vTable: M[V],
-    store: G[V, E]
+    table: M[V],
+    index: G[V, E]
 ) { self =>
 
   def out(vs: Rs[V]): Rs[(V, E)] = vs match {
     case IdResultSet(vs, _, _) =>
       vs.map { v =>
-        store.entry(v) match {
+        index.entry(v) match {
           case Entry(_, _, out, _) =>
             IdResultSet(
               out.vs,
               out.props,
               { i: Int =>
-                store.entry(i) match {
+                index.entry(i) match {
                   case Entry(_, v, _, _) =>
                     v -> out.props(i)
                 }
@@ -40,13 +40,13 @@ case class DirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
   def into(v: V): Rs[(V, E)] = ???
 
   def outV(v: V): Rs[V] = {
-    store.entry(vTable.lookup(v)) match {
+    index.entry(table.lookup(v)) match {
       case Entry(_, _, out, _) =>
         IdResultSet(
           out.vs,
           out.props,
           { i: Int =>
-            store.entry(i) match {
+            index.entry(i) match {
               case Entry(_, v, _, _) =>
                 v
             }
@@ -69,8 +69,6 @@ case class DirectedGraph[V, E, M[_]: LookupTable, G[V, E]: EntryIndex](
 
   def addEdge(src: V, dst: V, e: E): DirectedGraph[V, E, M, G] = ???
 
-  def addVertex(v: V): DirectedGraph[V, E, M, G] = ???
-
   def removeVertex(v: V): DirectedGraph[V, E, M, G] = ???
 
   def removeEdge(src: V, dst: V): DirectedGraph[V, E, M, G] = ???
@@ -88,8 +86,11 @@ object DirectedGraph {
       : Graph[DirectedGraph[*, *, M, GG]] =
     new Graph[DirectedGraph[*, *, M, GG]] {
 
-      def empty[V, E]: DirectedGraph[V, E, M, GG] = 
-        new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
+      def empty[V, E]: DirectedGraph[V, E, M, GG] =
+        new DirectedGraph[V, E, M, GG](
+          LookupTable[M].empty,
+          EntryIndex[GG].empty
+        )
 
       override def out[V, E](g: DirectedGraph[V, E, M, GG])(
           vs: Rs[V]
@@ -102,12 +103,17 @@ object DirectedGraph {
       override def isEmpty[V, E](g: DirectedGraph[V, E, M, GG]): Boolean =
         ???
 
-      override def vertices[V, E](g: DirectedGraph[V, E, M, GG]): Rs[V] =
-        g.
+      override def vertices[V, E](g: DirectedGraph[V, E, M, GG]): Rs[V] = {
+        Rs.fromIter(g.index.vertices)
+      }
 
       override def addVertex[V, E](g: DirectedGraph[V, E, M, GG])(
           v: V
-      ): DirectedGraph[V, E, M, GG] = ???
+      ): DirectedGraph[V, E, M, GG] = {
+        val (vId, newTable) = g.table.update(v)
+        val newStore = g.index.addOrUpdateEntry(vId, v)(identity)
+        new DirectedGraph(newTable, newStore)
+      }
 
       override def addEdge[V, E](
           g: DirectedGraph[V, E, M, GG]

@@ -9,6 +9,12 @@ trait EntryIndex[M[_, _]] extends Serializable {
 
   def entry[V, E](m: M[V, E])(id: Int): VertexEntry[V, E]
 
+  def addOrUpdateEntry[V, E](m: M[V, E])(id: Int, v: V)(
+      f: VertexEntry[V, E] => VertexEntry[V, E]
+  ): M[V, E]
+
+  def vertices[V, E](m: M[V, E]): Iterable[V]
+
   def empty[V, E]: M[V, E]
 }
 
@@ -19,11 +25,47 @@ object EntryIndex {
   implicit val vectorEntryIndex: EntryIndex[ImmutableEntryIndex] =
     new EntryIndex[ImmutableEntryIndex] {
 
+      override def addOrUpdateEntry[V, E](m: ImmutableEntryIndex[V, E])(
+          id: Int,
+          v: V
+      )(
+          f: VertexEntry[V, E] => VertexEntry[V, E]
+      ): ImmutableEntryIndex[V, E] = {
+        if (id >= m.size) {
+          // FIXME: can we get into a position where ids are greater than the size by more than 1?
+          m :+ Entry(
+            id,
+            v,
+            VecStore(Vector.empty, Vector.empty),
+            VecStore(Vector.empty, Vector.empty)
+          )
+        } else
+          m(id) match {
+            case Empty =>
+              m.updated(
+                id,
+                Entry(
+                  id,
+                  v,
+                  VecStore(Vector.empty, Vector.empty),
+                  VecStore(Vector.empty, Vector.empty)
+                )
+              )
+            case e => m.updated(id, f(e))
+          }
+      }
+
       override def entry[V, E](m: ImmutableEntryIndex[V, E])(
           id: Int
       ): VertexEntry[V, E] = m(id)
 
       override def empty[V, E]: ImmutableEntryIndex[V, E] = Vector.empty
+
+      override def vertices[V, E](m: ImmutableEntryIndex[V, E]): Iterable[V] = {
+        m.collect { case Entry(_, v, _, _) =>
+          v
+        }
+      }
 
     }
 
@@ -54,6 +96,10 @@ object EntryIndex {
     val typeClassInstance: TypeClassType
     def entry(id: Int): VertexEntry[A, B] =
       typeClassInstance.entry[A, B](self)(id)
+    def addOrUpdateEntry(id: Int, v: A)(
+        f: VertexEntry[A, B] => VertexEntry[A, B]
+    ): M[A, B] = typeClassInstance.addOrUpdateEntry[A, B](self)(id, v)(f)
+    def vertices: Iterable[A] = typeClassInstance.vertices[A, B](self)
   }
   trait AllOps[M[_, _], A, B] extends Ops[M, A, B]
   trait ToEntryIndexOps extends Serializable {
