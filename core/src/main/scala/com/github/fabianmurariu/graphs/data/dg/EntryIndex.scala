@@ -1,4 +1,4 @@
-package com.github.fabianmurariu.graphs.data
+package com.github.fabianmurariu.graphs.data.dg
 
 import simulacrum.typeclass
 import scala.annotation.implicitNotFound

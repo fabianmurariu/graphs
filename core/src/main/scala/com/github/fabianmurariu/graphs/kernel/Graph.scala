@@ -18,7 +18,6 @@ package com.github.fabianmurariu.graphs.kernel
 
 import simulacrum.typeclass
 import scala.annotation.implicitNotFound
-import com.github.fabianmurariu.graphs.ir.{Query, Ref}
 
 @implicitNotFound("Could not find an instance of Graph for ${G}")
 @typeclass
