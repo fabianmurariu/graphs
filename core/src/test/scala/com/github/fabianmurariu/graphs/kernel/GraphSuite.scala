@@ -44,6 +44,34 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
 
         assertEquals(g.out(rs).size, vs.size)
         assertEquals(g.out(rs).toSet, vs)
+        assertEquals(g.vertices.toSet, vs + v)
+        vs.forall { v =>
+          g.in(Rs(v)).size == 1
+        }
+
+      }
+    }
+  }
+
+  property(
+    "a hyperconnected graph will have every node pointing to all other nodes"
+  ) {
+    forAll { (vs: Set[V], e: E) =>
+      (vs.nonEmpty) ==> {
+
+        val g1 = vs.foldLeft(G.empty[V, E]) { (g, v) =>
+          g.addVertex(v)
+        }
+
+        // for each vertex including myself
+        val g2 = vs.foldLeft(g1) { (g, v) =>
+          vs.foldLeft(g) { (g, dst) =>
+            g.addEdge(v, dst, e)
+          }
+        }
+
+        assertEquals(g2.vertices.toSet, vs)
+        vs.forall { v => g2.out(Rs(v)).toSet == vs }
 
       }
     }
