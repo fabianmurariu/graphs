@@ -89,10 +89,19 @@ object DirectedGraph {
 trait AdjacencyStore[E] {
   def vs: IndexedSeq[Int]
   def props: IndexedSeq[E]
+
+  def appendPair(v: Int, e: E): AdjacencyStore[E]
 }
 
-case class VecStore[E](vs: Vector[Int], props: Vector[E])
-    extends AdjacencyStore[E]
+case class VecStore[E](
+    vs: Vector[Int] = Vector.empty,
+    props: Vector[E] = Vector.empty
+) extends AdjacencyStore[E] {
+
+  override def appendPair(v: Int, e: E): AdjacencyStore[E] =
+    this.copy(vs = vs :+ v, props :+ e)
+
+}
 
 trait NodeIndex[V, E] {
   def size: Int

@@ -73,16 +73,14 @@ object EntryIndex {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /** Summon an instance of [[EntryIndex]] for `M`.
-    */
-  @inline def apply[M[_, _]](implicit instance: EntryIndex[M]): EntryIndex[M] =
-    instance
+  /**
+   * Summon an instance of [[EntryIndex]] for `M`.
+   */
+  @inline def apply[M[_, _]](implicit instance: EntryIndex[M]): EntryIndex[M] = instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllEntryIndexOps[M[_, _], A, B](
-        target: M[A, B]
-    )(implicit tc: EntryIndex[M]): AllOps[M, A, B] {
+    implicit def toAllEntryIndexOps[M[_, _], A, B](target: M[A, B])(implicit tc: EntryIndex[M]): AllOps[M, A, B] {
       type TypeClassType = EntryIndex[M]
     } = new AllOps[M, A, B] {
       type TypeClassType = EntryIndex[M]
@@ -94,18 +92,13 @@ object EntryIndex {
     type TypeClassType <: EntryIndex[M]
     def self: M[A, B]
     val typeClassInstance: TypeClassType
-    def entry(id: Int): VertexEntry[A, B] =
-      typeClassInstance.entry[A, B](self)(id)
-    def addOrUpdateEntry(id: Int, v: A)(
-        f: VertexEntry[A, B] => VertexEntry[A, B]
-    ): M[A, B] = typeClassInstance.addOrUpdateEntry[A, B](self)(id, v)(f)
+    def entry(id: Int): VertexEntry[A, B] = typeClassInstance.entry[A, B](self)(id)
+    def addOrUpdateEntry(id: Int, v: A)(f: VertexEntry[A, B] => VertexEntry[A, B]): M[A, B] = typeClassInstance.addOrUpdateEntry[A, B](self)(id, v)(f)
     def vertices: Iterable[A] = typeClassInstance.vertices[A, B](self)
   }
   trait AllOps[M[_, _], A, B] extends Ops[M, A, B]
   trait ToEntryIndexOps extends Serializable {
-    implicit def toEntryIndexOps[M[_, _], A, B](
-        target: M[A, B]
-    )(implicit tc: EntryIndex[M]): Ops[M, A, B] {
+    implicit def toEntryIndexOps[M[_, _], A, B](target: M[A, B])(implicit tc: EntryIndex[M]): Ops[M, A, B] {
       type TypeClassType = EntryIndex[M]
     } = new Ops[M, A, B] {
       type TypeClassType = EntryIndex[M]
@@ -119,5 +112,6 @@ object EntryIndex {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
 
 }

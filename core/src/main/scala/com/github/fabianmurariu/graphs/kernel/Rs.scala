@@ -62,6 +62,11 @@ sealed trait Rs[O] {
 }
 
 object Rs {
+
+  def apply[O](v: O*): Rs[O] = 
+    if (v.isEmpty) EmptyResultSet()
+    else fromIter(v)
+
   def fromIter[O](vs: Iterable[O]): Rs[O] =
     IterableResultSet(vs)
 

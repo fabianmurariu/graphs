@@ -31,6 +31,23 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
       }
     }
   }
+  property(
+    "graph can represent a star graph where one node points to all the others"
+  ) {
+    forAll { (v: V, vs: Set[V], e: E) =>
+      (!vs(v)) ==> {
+
+        val g = vs.foldLeft(G.empty[V, E].addVertex(v)) { (g, dst) =>
+          g.addVertex(dst).addEdge(v, dst, e)
+        }
+        val rs = Rs(v)
+
+        assertEquals(g.out(rs).size, vs.size)
+        assertEquals(g.out(rs).toSet, vs)
+
+      }
+    }
+  }
 
 }
 
