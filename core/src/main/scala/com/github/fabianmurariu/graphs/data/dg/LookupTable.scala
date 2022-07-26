@@ -7,9 +7,11 @@ import scala.annotation.implicitNotFound
 @typeclass
 trait LookupTable[M[_]] extends Serializable {
 
-  def lookup[A](m: M[A])(a: A): Int
+  def lookup[A](m: M[A])(a: A): Option[Int]
 
   def update[A](m: M[A])(a: A): (Int, M[A])
+
+  def remove[A](m: M[A])(a: A): (Option[Int], M[A])
 
   def isEmpty[A](m: M[A]): Boolean
 
@@ -22,10 +24,16 @@ object LookupTable {
   implicit val mapLookupTable: LookupTable[ImmutableLookupTable] =
     new LookupTable[ImmutableLookupTable] {
 
+      override def remove[A](
+        m: ImmutableLookupTable[A]
+      )(a: A): (Option[Int], ImmutableLookupTable[A]) = {
+        m.get(a) -> (m - a)
+      }
+
       override def isEmpty[A](m: ImmutableLookupTable[A]): Boolean = m.isEmpty
 
       override def update[A](
-          m: ImmutableLookupTable[A]
+        m: ImmutableLookupTable[A]
       )(a: A): (Int, ImmutableLookupTable[A]) = {
         m.get(a) match {
           case Some(value) => (value, m)
@@ -38,7 +46,8 @@ object LookupTable {
         }
       }
 
-      override def lookup[A](m: ImmutableLookupTable[A])(a: A): Int = m(a)
+      override def lookup[A](m: ImmutableLookupTable[A])(a: A): Option[Int] =
+        m.get(a)
 
       override def empty[A]: ImmutableLookupTable[A] = Map.empty
 
@@ -55,7 +64,7 @@ object LookupTable {
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
     implicit def toAllLookupTableOps[M[_], A](
-        target: M[A]
+      target: M[A]
     )(implicit tc: LookupTable[M]): AllOps[M, A] {
       type TypeClassType = LookupTable[M]
     } = new AllOps[M, A] {
@@ -68,14 +77,15 @@ object LookupTable {
     type TypeClassType <: LookupTable[M]
     def self: M[A]
     val typeClassInstance: TypeClassType
-    def lookup(a: A): Int = typeClassInstance.lookup[A](self)(a)
+    def lookup(a: A): Option[Int] = typeClassInstance.lookup[A](self)(a)
     def update(a: A): (Int, M[A]) = typeClassInstance.update[A](self)(a)
+    def remove(a: A): (Option[Int], M[A]) = typeClassInstance.remove[A](self)(a)
     def isEmpty: Boolean = typeClassInstance.isEmpty[A](self)
   }
   trait AllOps[M[_], A] extends Ops[M, A]
   trait ToLookupTableOps extends Serializable {
     implicit def toLookupTableOps[M[_], A](
-        target: M[A]
+      target: M[A]
     )(implicit tc: LookupTable[M]): Ops[M, A] {
       type TypeClassType = LookupTable[M]
     } = new Ops[M, A] {

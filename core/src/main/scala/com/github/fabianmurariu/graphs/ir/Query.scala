@@ -23,9 +23,9 @@ case class NodeLookup[V, E](v: Option[V]) extends Query[V, E, Node[V]] {
 }
 
 case class Out[V, E](
-    from: Node[V],
-    e: Option[E],
-    exprs: Map[Ref, LogicalNode] = Map.empty
+  from: Node[V],
+  e: Option[E],
+  exprs: Map[Ref, LogicalNode] = Map.empty
 ) extends Query[V, E, Edge[E]] {
 
   def flatMap[O <: Ref](f: Edge[E] => Query[V, E, O]): Query[V, E, O] = {
@@ -42,9 +42,9 @@ case class Out[V, E](
 // case class Into[E](from: Node, e: Option[E]) extends Query[Nothing, E, Edge]
 
 case class Dest[V, E](
-    e: Edge[E],
-    v: Option[V],
-    exprs: Map[Ref, LogicalNode] = Map.empty
+  e: Edge[E],
+  v: Option[V],
+  exprs: Map[Ref, LogicalNode] = Map.empty
 ) extends Query[V, E, Node[V]] {
 
   override def merge(prev: (Ref, LogicalNode)*): Query[V, E, Node[V]] = {
@@ -59,8 +59,8 @@ case class Dest[V, E](
 }
 
 case class Return[V, E](
-    rs: Vector[Ref],
-    exprs: Map[Ref, LogicalNode] = Map.empty
+  rs: Vector[Ref],
+  exprs: Map[Ref, LogicalNode] = Map.empty
 ) extends Query[V, E, Row] {
   override def merge(prev: (Ref, LogicalNode)*): Query[V, E, Row] = {
     this.copy(exprs = exprs.++(prev))
@@ -68,7 +68,7 @@ case class Return[V, E](
 
   def map(f: Row => Row): Query[V, E, Row] = {
     val key = new Row
-    val next = f(key) 
+    val next = f(key)
     merge(next -> LogicalNode.Select(rs.map(LogicalNode.LNRef(_))))
   }
 }

@@ -17,9 +17,9 @@
 package com.github.fabianmurariu.graphs.data
 
 final case class Links[V, E](
-    v: V,
-    out: Map[V, E] = Map.empty[V, E],
-    into: Map[V, E] = Map.empty[V, E]
+  v: V,
+  out: Map[V, E] = Map.empty[V, E],
+  into: Map[V, E] = Map.empty[V, E]
 ) { self =>
   def addOutEdge(dst: V, e: E): Links[V, E] =
     self.copy(out = out.updated(dst, e))

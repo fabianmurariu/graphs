@@ -10,8 +10,10 @@ trait EntryIndex[M[_, _]] extends Serializable {
   def entry[V, E](m: M[V, E])(id: Int): VertexEntry[V, E]
 
   def addOrUpdateEntry[V, E](m: M[V, E])(id: Int, v: V)(
-      f: VertexEntry[V, E] => VertexEntry[V, E]
+    f: VertexEntry[V, E] => VertexEntry[V, E]
   ): M[V, E]
+
+  def removeVertex[V, E](m: M[V, E])(id: Int): M[V, E]
 
   def vertices[V, E](m: M[V, E]): Iterable[V]
 
@@ -25,11 +27,37 @@ object EntryIndex {
   implicit val vectorEntryIndex: EntryIndex[ImmutableEntryIndex] =
     new EntryIndex[ImmutableEntryIndex] {
 
-      override def addOrUpdateEntry[V, E](m: ImmutableEntryIndex[V, E])(
-          id: Int,
-          v: V
-      )(
-          f: VertexEntry[V, E] => VertexEntry[V, E]
+      override def removeVertex[V, E](
+        m: ImmutableEntryIndex[V, E]
+      )(id: Int): ImmutableEntryIndex[V, E] = {
+        m(id) match {
+          case Empty => m
+          case Entry(id, _, out, into) =>
+            val g1 = out.foldLeft(m) { (g, i) =>
+              g(i) match {
+                case Empty => g
+                case e @ Entry(_, _, _, into) =>
+                  val newE = e.copy(into = into.remove(id))
+                  g.updated(i, newE)
+              }
+            }
+
+            val g2 = into.foldLeft(g1) { (g, i) =>
+              g(i) match {
+                case Empty => g
+                case e @ Entry(_, _, out, _) =>
+                  val newE = e.copy(out = out.remove(id))
+                  g.updated(i, newE)
+              }
+            }
+            g2.updated(id, Empty.asInstanceOf[VertexEntry[V, E]])
+        }
+      }
+
+      override def addOrUpdateEntry[V, E](
+        m: ImmutableEntryIndex[V, E]
+      )(id: Int, v: V)(
+        f: VertexEntry[V, E] => VertexEntry[V, E]
       ): ImmutableEntryIndex[V, E] = {
         if (id >= m.size) {
           // FIXME: can we get into a position where ids are greater than the size by more than 1?
@@ -56,7 +84,7 @@ object EntryIndex {
       }
 
       override def entry[V, E](m: ImmutableEntryIndex[V, E])(
-          id: Int
+        id: Int
       ): VertexEntry[V, E] = m(id)
 
       override def empty[V, E]: ImmutableEntryIndex[V, E] = Vector.empty
@@ -73,14 +101,16 @@ object EntryIndex {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /**
-   * Summon an instance of [[EntryIndex]] for `M`.
-   */
-  @inline def apply[M[_, _]](implicit instance: EntryIndex[M]): EntryIndex[M] = instance
+  /** Summon an instance of [[EntryIndex]] for `M`.
+    */
+  @inline def apply[M[_, _]](implicit instance: EntryIndex[M]): EntryIndex[M] =
+    instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllEntryIndexOps[M[_, _], A, B](target: M[A, B])(implicit tc: EntryIndex[M]): AllOps[M, A, B] {
+    implicit def toAllEntryIndexOps[M[_, _], A, B](
+      target: M[A, B]
+    )(implicit tc: EntryIndex[M]): AllOps[M, A, B] {
       type TypeClassType = EntryIndex[M]
     } = new AllOps[M, A, B] {
       type TypeClassType = EntryIndex[M]
@@ -92,13 +122,20 @@ object EntryIndex {
     type TypeClassType <: EntryIndex[M]
     def self: M[A, B]
     val typeClassInstance: TypeClassType
-    def entry(id: Int): VertexEntry[A, B] = typeClassInstance.entry[A, B](self)(id)
-    def addOrUpdateEntry(id: Int, v: A)(f: VertexEntry[A, B] => VertexEntry[A, B]): M[A, B] = typeClassInstance.addOrUpdateEntry[A, B](self)(id, v)(f)
+    def entry(id: Int): VertexEntry[A, B] =
+      typeClassInstance.entry[A, B](self)(id)
+    def addOrUpdateEntry(id: Int, v: A)(
+      f: VertexEntry[A, B] => VertexEntry[A, B]
+    ): M[A, B] = typeClassInstance.addOrUpdateEntry[A, B](self)(id, v)(f)
+    def removeVertex(id: Int): M[A, B] =
+      typeClassInstance.removeVertex[A, B](self)(id)
     def vertices: Iterable[A] = typeClassInstance.vertices[A, B](self)
   }
   trait AllOps[M[_, _], A, B] extends Ops[M, A, B]
   trait ToEntryIndexOps extends Serializable {
-    implicit def toEntryIndexOps[M[_, _], A, B](target: M[A, B])(implicit tc: EntryIndex[M]): Ops[M, A, B] {
+    implicit def toEntryIndexOps[M[_, _], A, B](
+      target: M[A, B]
+    )(implicit tc: EntryIndex[M]): Ops[M, A, B] {
       type TypeClassType = EntryIndex[M]
     } = new Ops[M, A, B] {
       type TypeClassType = EntryIndex[M]
@@ -112,6 +149,5 @@ object EntryIndex {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
-
 
 }

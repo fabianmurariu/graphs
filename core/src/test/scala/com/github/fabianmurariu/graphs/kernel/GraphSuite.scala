@@ -7,7 +7,7 @@ import org.scalacheck.Arbitrary
 import com.github.fabianmurariu.graphs.data.dg._
 
 abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
-    G: Graph[G]
+  G: Graph[G]
 ) extends ScalaCheckSuite {
 
   property("graph can add all the vertices then get them back") {
@@ -75,6 +75,38 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
 
       }
     }
+  }
+
+  property(
+    "remove one vertex from a graph with one vertex results in the empty graph"
+  ) {
+    forAll { (v: V) =>
+      val g = G.empty[V, E].addVertex(v).removeVertex(v)
+      assert(g.isEmpty)
+    }
+  }
+
+  property(
+    "removing the central node of a star graph means all nodes have no inbound and no outbound"
+  ) {
+    forAll { (v: V, vs: Set[V], e: E) =>
+      (!vs(v)) ==> {
+
+        val g = vs
+          .foldLeft(G.empty[V, E].addVertex(v)) { (g, dst) =>
+            g.addVertex(dst).addEdge(v, dst, e)
+          }
+          .removeVertex(v)
+
+        vs.foreach { dst =>
+          assertEquals(g.out(Rs(dst)).size, 0)
+          assertEquals(g.in(Rs(dst)).size, 0)
+        }
+
+        assertEquals(g.vertices.toSet, vs)
+      }
+    }
+
   }
 
 }

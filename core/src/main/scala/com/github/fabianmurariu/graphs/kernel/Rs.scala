@@ -63,7 +63,7 @@ sealed trait Rs[O] {
 
 object Rs {
 
-  def apply[O](v: O*): Rs[O] = 
+  def apply[O](v: O*): Rs[O] =
     if (v.isEmpty) EmptyResultSet()
     else fromIter(v)
 
@@ -83,19 +83,19 @@ object Rs {
   }
 
   case class IdResultSet[E, O](
-      vs: IndexedSeq[Int],
-      e: IndexedSeq[E],
-      f: Int => O
+    vs: IndexedSeq[Int],
+    e: IndexedSeq[E],
+    f: Int => O
   ) extends Rs[O] {
 
     override def to[C1](factory: Factory[O, C1]): C1 = {
 
       @tailrec
       def loop(
-          b: Builder[O, C1],
-          iter: Iterator[Int],
-          e: IndexedSeq[E],
-          i: Int
+        b: Builder[O, C1],
+        iter: Iterator[Int],
+        e: IndexedSeq[E],
+        i: Int
       ): C1 = {
         if (!iter.hasNext) b.result()
         else {

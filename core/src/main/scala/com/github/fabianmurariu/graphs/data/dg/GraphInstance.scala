@@ -2,9 +2,9 @@ package com.github.fabianmurariu.graphs.data.dg
 
 import com.github.fabianmurariu.graphs.kernel.Graph
 import com.github.fabianmurariu.graphs.kernel.Rs
-import com.github.fabianmurariu.graphs.syntax._
 import com.github.fabianmurariu.graphs.kernel.Rs.EmptyResultSet
 import com.github.fabianmurariu.graphs.kernel.Rs.IterableResultSet
+import com.github.fabianmurariu.graphs.syntax._
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     extends Graph[DirectedGraph[*, *, M, GG]] {
@@ -15,7 +15,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
         vs.map { intoVId(g) }.reduce(_ ++ _)
       case e @ EmptyResultSet() => e
       case IterableResultSet(vs) =>
-        vs.map(g.table.lookup(_))
+        vs.flatMap(g.table.lookup(_))
           .map { intoVId(g) }
           .reduce(_ ++ _)
     }
@@ -25,7 +25,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
         vs.map { outVId(g) }.reduce(_ ++ _)
       case e @ EmptyResultSet() => e
       case IterableResultSet(vs) =>
-        vs.map(g.table.lookup(_))
+        vs.flatMap(g.table.lookup(_))
           .map { outVId(g) }
           .reduce(_ ++ _)
     }
@@ -47,7 +47,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   }
 
   private def adjStoreToRs[V, E](
-      g: DirectedGraph[V, E, M, GG]
+    g: DirectedGraph[V, E, M, GG]
   )(as: AdjacencyStore[E]): Rs[V] = {
     Rs.IdResultSet(
       as.vs,
@@ -60,25 +60,27 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     )
   }
 
-  override def isEmpty[V, E](g: DirectedGraph[V, E, M, GG]): Boolean = g.table.isEmpty
+  override def isEmpty[V, E](g: DirectedGraph[V, E, M, GG]): Boolean =
+    g.table.isEmpty
 
   override def vertices[V, E](g: DirectedGraph[V, E, M, GG]): Rs[V] =
     Rs.fromIter(g.index.vertices)
 
-  override def addVertex[V, E](g: DirectedGraph[V, E, M, GG])(
-      v: V
-  ): DirectedGraph[V, E, M, GG] = {
+  override def addVertex[V, E](
+    g: DirectedGraph[V, E, M, GG]
+  )(v: V): DirectedGraph[V, E, M, GG] = {
     val (vId, newTable) = g.table.update(v)
     val newStore = g.index.addOrUpdateEntry(vId, v)(identity)
     new DirectedGraph(newTable, newStore)
   }
   override def addEdge[V, E](
-      g: DirectedGraph[V, E, M, GG]
+    g: DirectedGraph[V, E, M, GG]
   )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = {
-    val srcId = g.table.lookup(src)
-    val dstId = g.table.lookup(dst)
 
-    val index = g.index
+    val index = for {
+      srcId <- g.table.lookup(src)
+      dstId <- g.table.lookup(dst)
+    } yield g.index
       .addOrUpdateEntry(srcId, src) {
         case Empty =>
           Entry(srcId, src, VecStore(Vector(dstId), Vector(e)), VecStore())
@@ -92,22 +94,26 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
           ent.copy(into = intoStore.appendPair(srcId, e))
       }
 
-    new DirectedGraph(g.table, index)
+    new DirectedGraph(g.table, index.getOrElse(g.index))
   }
 
-  override def removeVertex[V, E](g: DirectedGraph[V, E, M, GG])(
-      v: V
-  ): DirectedGraph[V, E, M, GG] = ???
+  override def removeVertex[V, E](
+    g: DirectedGraph[V, E, M, GG]
+  )(v: V): DirectedGraph[V, E, M, GG] = {
+    g.table.remove(v) match {
+      case (None, _) => g
+      case (Some(id), table) =>
+        val index = g.index.removeVertex(id)
+        new DirectedGraph(table, index)
+    }
+  }
 
   override def removeEdge[V, E](
-      g: DirectedGraph[V, E, M, GG]
+    g: DirectedGraph[V, E, M, GG]
   )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = ???
 
   override def get[V, E](g: DirectedGraph[V, E, M, GG])(v: V): Option[V] = ???
 
   override def empty[V, E]: DirectedGraph[V, E, M, GG] =
-    new DirectedGraph[V, E, M, GG](
-      LookupTable[M].empty,
-      EntryIndex[GG].empty
-    )
+    new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
 }
