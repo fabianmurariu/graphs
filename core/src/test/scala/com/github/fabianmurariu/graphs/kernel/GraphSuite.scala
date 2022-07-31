@@ -26,6 +26,18 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
   G: Graph[G]
 ) extends ScalaCheckSuite {
 
+  property("we can get a node back when the graph is not empty") {
+    forAll { (vs: Set[V]) =>
+      val g = G.empty[V, E]
+
+      val g1 = vs.foldLeft(g) { (g, v) =>
+        g.addVertex(v)
+      }
+
+      vs.forall(v => g1.get(v).nonEmpty) && vs.forall(v => g.get(v).isEmpty)
+    }
+  }
+
   property("graph can add all the vertices then get them back") {
     forAll { (vs: Set[V]) =>
       val g = vs.foldLeft(G.empty[V, E]) { (g, v) =>

@@ -128,7 +128,14 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     g: DirectedGraph[V, E, M, GG]
   )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = ???
 
-  override def get[V, E](g: DirectedGraph[V, E, M, GG])(v: V): Option[V] = ???
+  override def get[V, E](g: DirectedGraph[V, E, M, GG])(v: V): Option[V] =
+    g.table
+      .lookup(v)
+      .map(g.index.entry)
+      .flatMap {
+        case Entry(_, v, _, _) => Some(v)
+        case _                 => None
+      }
 
   override def empty[V, E]: DirectedGraph[V, E, M, GG] =
     new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
