@@ -16,11 +16,13 @@
 
 package com.github.fabianmurariu.graphs.data.dg
 
-import com.github.fabianmurariu.graphs.kernel.Graph
+import com.github.fabianmurariu.graphs.kernel.{Graph, GraphError}
 import com.github.fabianmurariu.graphs.kernel.Rs
 import com.github.fabianmurariu.graphs.kernel.Rs.EmptyResultSet
 import com.github.fabianmurariu.graphs.kernel.Rs.IterableResultSet
 import com.github.fabianmurariu.graphs.syntax._
+import scala.collection.mutable.ReusableBuilder
+import scala.annotation.tailrec
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     extends Graph[DirectedGraph[*, *, M, GG]] {
@@ -89,6 +91,37 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     val newStore = g.index.addOrUpdateEntry(vId, v)(identity)
     new DirectedGraph(newTable, newStore)
   }
+
+  override def addVertices[V, E](
+    g: DirectedGraph[V, E, M, GG]
+  )(vs: Rs[V]): (Rs[V], DirectedGraph[V, E, M, GG]) = {
+
+    @tailrec
+    def loop(
+      iter: Iterator[V],
+      b: scala.collection.mutable.Builder[V, Vector[V]],
+      g: DirectedGraph[V, E, M, GG]
+    ): DirectedGraph[V, E, M, GG] = {
+      if (iter.hasNext) {
+        val v = iter.next()
+        val g1 = addVertex(g)(v)
+        b += v
+        loop(iter, b, g1)
+      } else g
+    }
+    val b = Vector.newBuilder[V]
+    val g1 = loop(vs.iterator, b, g)
+    Rs.fromIter(b.result()) -> g1
+  }
+
+  override def addEdges[V, E](g: DirectedGraph[V, E, M, GG])(
+    src: Rs[V],
+    dst: Rs[V],
+    e: Rs[E]
+  ): Either[GraphError, DirectedGraph[V, E, M, GG]] = {
+    Left(GraphError.AddEdgeFailed("boom!"))
+  }
+
   override def addEdge[V, E](
     g: DirectedGraph[V, E, M, GG]
   )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = {

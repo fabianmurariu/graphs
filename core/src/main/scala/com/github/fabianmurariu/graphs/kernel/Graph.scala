@@ -29,7 +29,10 @@ trait Graph[G[_, _]] extends Serializable {
   def vertices[V, E](g: G[V, E]): Rs[V]
 
   def addVertex[V, E](g: G[V, E])(v: V): G[V, E]
+  def addVertices[V, E](g: G[V, E])(v: Rs[V]): (Rs[V], G[V, E])
+  def addEdges[V, E](g: G[V, E])(src: Rs[V], dst: Rs[V], e: Rs[E]): Either[GraphError, G[V, E]]
   def addEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E]
+
   def removeVertex[V, E](g: G[V, E])(v: V): G[V, E]
   def removeEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E]
 
@@ -43,15 +46,14 @@ object Graph {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /** Summon an instance of [[Graph]] for `G`.
-    */
+  /**
+   * Summon an instance of [[Graph]] for `G`.
+   */
   @inline def apply[G[_, _]](implicit instance: Graph[G]): Graph[G] = instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: Graph[G]): AllOps[G, A, B] {
+    implicit def toAllGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): AllOps[G, A, B] {
       type TypeClassType = Graph[G]
     } = new AllOps[G, A, B] {
       type TypeClassType = Graph[G]
@@ -68,19 +70,16 @@ object Graph {
     def isEmpty: Boolean = typeClassInstance.isEmpty[A, B](self)
     def vertices: Rs[A] = typeClassInstance.vertices[A, B](self)
     def addVertex(v: A): G[A, B] = typeClassInstance.addVertex[A, B](self)(v)
-    def addEdge(src: A, dst: A, e: B): G[A, B] =
-      typeClassInstance.addEdge[A, B](self)(src, dst, e)
-    def removeVertex(v: A): G[A, B] =
-      typeClassInstance.removeVertex[A, B](self)(v)
-    def removeEdge(src: A, dst: A, e: B): G[A, B] =
-      typeClassInstance.removeEdge[A, B](self)(src, dst, e)
+    def addVertices(v: Rs[A]): (Rs[A], G[A, B]) = typeClassInstance.addVertices[A, B](self)(v)
+    def addEdges(src: Rs[A], dst: Rs[A], e: Rs[B]): Either[GraphError, G[A, B]] = typeClassInstance.addEdges[A, B](self)(src, dst, e)
+    def addEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.addEdge[A, B](self)(src, dst, e)
+    def removeVertex(v: A): G[A, B] = typeClassInstance.removeVertex[A, B](self)(v)
+    def removeEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.removeEdge[A, B](self)(src, dst, e)
     def get(v: A): Option[A] = typeClassInstance.get[A, B](self)(v)
   }
   trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
   trait ToGraphOps extends Serializable {
-    implicit def toGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: Graph[G]): Ops[G, A, B] {
+    implicit def toGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): Ops[G, A, B] {
       type TypeClassType = Graph[G]
     } = new Ops[G, A, B] {
       type TypeClassType = Graph[G]
@@ -94,5 +93,11 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
+
+
+
+
+
 
 }

@@ -28,6 +28,13 @@ sealed trait Rs[O] {
   def toVector = to(Vector)
   def toSet = to(Set)
 
+  def iterator: Iterator[O] = this match {
+    case Rs.EmptyResultSet()      => Iterator.empty
+    case Rs.IterableResultSet(vs) => vs.iterator
+    case Rs.IdResultSet(ids, _, f) =>
+      ids.iterator.map(f)
+  }
+
   def map[A](f: O => A): Rs[A] = this match {
     case empty @ Rs.EmptyResultSet() => empty.asInstanceOf[Rs[A]]
     case Rs.IterableResultSet(vs)    => Rs.IterableResultSet(vs.map(f))
