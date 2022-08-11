@@ -134,9 +134,53 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
         assertEquals(g.vertices.toSet, vs)
       }
     }
-
   }
 
+}
+
+abstract class GraphSuiteNumeric[G[_, _], V: Arbitrary: Numeric, E: Arbitrary](
+  implicit G: Graph[G]
+) extends ScalaCheckSuite {
+
+  // test("failing") {
+  //   val vs = Vector(-1121741676, 1, 1982442154, 0, -2147483648)
+  //   val e = 1
+
+  //   val pairs = vs.sliding(2)
+  //   val actual = pairs.foldLeft(G.empty[Int, Int]) {
+  //       case (g, s) if s.size == 2 =>
+  //         val src = s.head
+  //         val dst = s.tail.head
+  //         println(s"$src -> $dst")
+  //         g.addVertex(src).addVertex(dst).addEdge(src, dst, e)
+  //       case (g, s) if s.size == 1 =>
+  //         g.addVertex(s.head)
+  //       case (g, _) => g
+  //     }
+  //     .dfsFold(0, vs.head)(_ + _)
+  //   assertEquals(actual, vs.sum)
+  // }
+
+  property("can traverse and sum all the nodes in a path graph") {
+    forAll { (vs: Set[V], e: E) =>
+      vs.nonEmpty ==> {
+
+        val actual = vs.to(Vector)
+          .sliding(2)
+          .foldLeft(G.empty[V, E]) {
+            case (g, s) if s.size == 2 =>
+              val src = s.head
+              val dst = s.tail.head
+              g.addVertex(src).addVertex(dst).addEdge(src, dst, e)
+            case (g, s) if s.size == 1 =>
+              g.addVertex(s.head)
+            case (g, _) => g
+          }
+          .dfsFold(Numeric[V].zero, vs.head)(Numeric[V].plus)
+        assertEquals(actual, vs.sum)
+      }
+    }
+  }
 }
 
 class UnsafeDirectedGraphSuite
@@ -146,3 +190,11 @@ class UnsafeDirectedGraphSuite
       LookupTable.ImmutableLookupTable,
       EntryIndex.ImmutableEntryIndex
     ], String, Int]
+
+class UnsafeDirectedGraphSuiteNum
+    extends GraphSuiteNumeric[DirectedGraph[
+      *,
+      *,
+      LookupTable.ImmutableLookupTable,
+      EntryIndex.ImmutableEntryIndex
+    ], Int, Int]

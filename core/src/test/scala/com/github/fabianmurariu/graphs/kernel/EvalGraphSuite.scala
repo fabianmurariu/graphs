@@ -11,15 +11,16 @@ import com.github.fabianmurariu.graphs.ir.Node
 import org.scalacheck.Arbitrary
 import com.github.fabianmurariu.graphs.ir.Row
 
-class EvalGraphSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E]
+abstract class EvalGraphSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E]
     extends ScalaCheckSuite {
 
-  property("insert vertex") {
+  property("insert vertex".ignore) {
 
     import Query._
 
     forAll { (v: V) =>
 
+      //TODO: this needs a rethink, only the final object is valid as a query plan
       val q = for {
         add <- Query.AddVertex[V, E](Vector(v))
       } yield Vector(add)
