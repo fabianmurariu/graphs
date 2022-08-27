@@ -57,14 +57,16 @@ sealed trait Rs[O] {
 
   def ++(other: Rs[O]): Rs[O] =
     (this, other) match {
+      case (l: Rs.IdResultSet[_, O] @unchecked, r: Rs.IdResultSet[_, O]) =>
+        Rs.IdResultSet(l.vs ++ r.vs, l.e ++ r.e, l.f) // keep operating on ids and defer applying f
       case (Rs.IterableResultSet(vs), Rs.IterableResultSet(vsOther)) =>
         Rs.IterableResultSet(vs ++ vsOther)
-      case (left: Rs[O], _: Rs.EmptyResultSet[O])  => left
-      case (_: Rs.EmptyResultSet[O], right: Rs[O]) => right
       case (ids: Rs.IdResultSet[_, O] @unchecked, right) =>
         Rs.IterableResultSet(ids.to(Vector)) ++ right
       case (left, ids: Rs.IdResultSet[_, O] @unchecked) =>
         left ++ Rs.IterableResultSet(ids.to(Vector))
+      case (left: Rs[O], _: Rs.EmptyResultSet[O])  => left
+      case (_: Rs.EmptyResultSet[O], right: Rs[O]) => right
     }
 }
 

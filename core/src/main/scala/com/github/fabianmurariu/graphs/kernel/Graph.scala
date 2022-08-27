@@ -19,6 +19,7 @@ package com.github.fabianmurariu.graphs.kernel
 import simulacrum.typeclass
 import scala.annotation.implicitNotFound
 import scala.annotation.tailrec
+import scala.collection.immutable.Queue
 
 @implicitNotFound("Could not find an instance of Graph for ${G}")
 @typeclass
@@ -49,12 +50,15 @@ trait Graph[G[_, _]] extends Serializable { self =>
 
   def empty[V, E]: G[V, E]
 
-  def dfsFold[V, E, B](g: G[V, E], b: B, start: V)(f: (B, V) => B) =
-    fold[V, E, B, List](g, b)(f)(start)
+  def dfsFold[V, E, B](g: G[V, E])(b: B, start: V)(f: (B, V) => B):B =
+    fold[V, E, B, List](g)(b, start)(f)
 
-  def fold[V, E, B, M[_]](g: G[V, E], b: B)(
+  def bfsFold[V, E, B](g: G[V, E])(b: B, start: V)(f: (B, V) => B): B =
+    fold[V, E, B, Queue](g)(b, start)(f)
+
+  def fold[V, E, B, M[_]](g: G[V, E])(b: B, start: V)(
     f: (B, V) => B
-  )(start: V)(implicit TS: TraverseSupport[M]): B = {
+  )(implicit TS: TraverseSupport[M]): B = {
     @tailrec
     def loop(q: M[V], b: B, visited: scala.collection.mutable.Set[V]): B = {
       TS.pop(q) match {
@@ -115,8 +119,9 @@ object Graph {
     def removeVertex(v: A): G[A, B] = typeClassInstance.removeVertex[A, B](self)(v)
     def removeEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.removeEdge[A, B](self)(src, dst, e)
     def get(v: A): Option[A] = typeClassInstance.get[A, B](self)(v)
-    def dfsFold[C](b: C, start: A)(f: (C, A) => C) = typeClassInstance.dfsFold[A, B, C](self, b, start)(f)
-    def fold[C, M[_]](b: C)(f: (C, A) => C)(start: A)(implicit TS: TraverseSupport[M]): C = typeClassInstance.fold[A, B, C, M](self, b)(f)(start)(TS)
+    def dfsFold[C](b: C, start: A)(f: (C, A) => C): C = typeClassInstance.dfsFold[A, B, C](self)(b, start)(f)
+    def bfsFold[C](b: C, start: A)(f: (C, A) => C): C = typeClassInstance.bfsFold[A, B, C](self)(b, start)(f)
+    def fold[C, M[_]](b: C, start: A)(f: (C, A) => C)(implicit TS: TraverseSupport[M]): C = typeClassInstance.fold[A, B, C, M](self)(b, start)(f)(TS)
   }
   trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
   trait ToGraphOps extends Serializable {
@@ -134,6 +139,8 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
+
 
 
 }

@@ -21,7 +21,6 @@ import com.github.fabianmurariu.graphs.kernel.Rs
 import com.github.fabianmurariu.graphs.kernel.Rs.EmptyResultSet
 import com.github.fabianmurariu.graphs.kernel.Rs.IterableResultSet
 import com.github.fabianmurariu.graphs.syntax._
-import scala.collection.mutable.ReusableBuilder
 import scala.annotation.tailrec
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]

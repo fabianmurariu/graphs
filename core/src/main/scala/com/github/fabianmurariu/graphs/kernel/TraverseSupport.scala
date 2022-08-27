@@ -2,6 +2,7 @@ package com.github.fabianmurariu.graphs.kernel
 
 import simulacrum.typeclass
 import scala.annotation.implicitNotFound
+import scala.collection.immutable.Queue
 
 @implicitNotFound("Could not find an instance of TraverseSupport for ${F}")
 @typeclass
@@ -15,6 +16,16 @@ trait TraverseSupport[F[_]] extends Serializable {
 }
 
 object TraverseSupport {
+
+  implicit val queueInstance = new TraverseSupport[Queue] {
+
+    override def push[A](f: Queue[A])(a: A): Queue[A] = f.enqueue(a)
+
+    override def pop[A](f: Queue[A]): Option[(A, Queue[A])] = f.dequeueOption
+
+    override def fromIter[A](iter: Iterable[A]): Queue[A] = Queue.from(iter)
+
+  }
 
   implicit val listInstance = new TraverseSupport[List] {
 
@@ -71,6 +82,8 @@ object TraverseSupport {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
+
 
 
 }

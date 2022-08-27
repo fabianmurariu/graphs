@@ -136,36 +136,36 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
     }
   }
 
+  property(
+    "load a heap and traverse with bfs should result in the same order"
+  ) {
+    forAll { (vSet: Set[V], e: E) =>
+
+      val vs = vSet.toVector
+      val tree = GraphSuiteSupport.mkTree(vs, e, Graph[G].empty[V, E])
+
+      if (vs.nonEmpty) {
+        val actual: List[V] = tree.bfsFold(List.empty[V], vs.head) { (l, v) =>
+          v :: l
+        }
+
+        assertEquals(actual.toVector.reverse, vs)
+      }
+    }
+  }
+
 }
 
 abstract class GraphSuiteNumeric[G[_, _], V: Arbitrary: Numeric, E: Arbitrary](
   implicit G: Graph[G]
 ) extends ScalaCheckSuite {
 
-  // test("failing") {
-  //   val vs = Vector(-1121741676, 1, 1982442154, 0, -2147483648)
-  //   val e = 1
-
-  //   val pairs = vs.sliding(2)
-  //   val actual = pairs.foldLeft(G.empty[Int, Int]) {
-  //       case (g, s) if s.size == 2 =>
-  //         val src = s.head
-  //         val dst = s.tail.head
-  //         println(s"$src -> $dst")
-  //         g.addVertex(src).addVertex(dst).addEdge(src, dst, e)
-  //       case (g, s) if s.size == 1 =>
-  //         g.addVertex(s.head)
-  //       case (g, _) => g
-  //     }
-  //     .dfsFold(0, vs.head)(_ + _)
-  //   assertEquals(actual, vs.sum)
-  // }
-
   property("can traverse and sum all the nodes in a path graph") {
     forAll { (vs: Set[V], e: E) =>
       vs.nonEmpty ==> {
 
-        val actual = vs.to(Vector)
+        val actual = vs
+          .to(Vector)
           .sliding(2)
           .foldLeft(G.empty[V, E]) {
             case (g, s) if s.size == 2 =>
@@ -198,3 +198,31 @@ class UnsafeDirectedGraphSuiteNum
       LookupTable.ImmutableLookupTable,
       EntryIndex.ImmutableEntryIndex
     ], Int, Int]
+
+object GraphSuiteSupport {
+  def mkTree[G[_, _]: Graph, V, E](
+    vs: Vector[V],
+    e: E,
+    g: G[V, E],
+    i: Int = 0
+  ): G[V, E] = {
+    if (i < vs.length) {
+      val v = vs(i)
+      val g1 = g.addVertex(v)
+      // add the left node
+      val left = 2 * i + 1
+      val g2: G[V, E] = if (left < vs.length) {
+        // we added left let's add an edge
+        mkTree(vs, e, g1, left).addEdge(v, vs(left), e)
+      } else mkTree(vs, e, g1, left)
+
+      // add the right node
+      val right = 2 * i + 2
+      val g3 = if (right < vs.length) {
+        // we added right let's add an edge
+        mkTree(vs, e, g2, right).addEdge(v, vs(right), e)
+      } else mkTree(vs, e, g2, right)
+      g3
+    } else g
+  }
+}
