@@ -38,6 +38,7 @@ trait Graph[G[_, _]] extends Serializable { self =>
 
   def addVertex[V, E](g: G[V, E])(v: V): G[V, E]
   def addVertices[V, E](g: G[V, E])(v: Rs[V]): (Rs[V], G[V, E])
+  
   def addEdges[V, E](
     g: G[V, E]
   )(src: Rs[V], dst: Rs[V], e: Rs[E]): Either[GraphError, G[V, E]]
@@ -139,6 +140,8 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
+
 
 
 

@@ -16,17 +16,16 @@
 
 package com.github.fabianmurariu.graphs.kernel
 
-import com.github.fabianmurariu.graphs.ir.Query
 import simulacrum.typeclass
 import com.github.fabianmurariu.graphs.ir.Ref
 import scala.annotation.implicitNotFound
-import com.github.fabianmurariu.graphs.ir.Ret
 import com.github.fabianmurariu.graphs.ir.LogicalNode
-import cats.syntax.all._
 @implicitNotFound("Could not find an instance of EvalGraph for ${G}")
 @typeclass
 trait EvalGraph[G[_, _]] extends Serializable {
-  def eval[V, E](g: G[V, E])(q: Query[V, E, Ret]): Rs[Map[String, Any]]
+  def eval[V, E](
+    g: G[V, E]
+  )(start: LogicalNode, table: Map[Ref, LogicalNode]): Rs[Map[String, Any]]
 }
 
 object EvalGraph {
@@ -35,24 +34,26 @@ object EvalGraph {
 
     override def eval[V, E](
       g: G[V, E]
-    )(q: Query[V, E, Ret]): Rs[Map[String, Any]] = {
+    )(ln: LogicalNode, table: Map[Ref, LogicalNode]): Rs[Map[String, Any]] = {
 
       // find the Ret key
       // match the select logical node
       // start exploring the tree in a DFS fashion
 
-      q.exprs(Ret()) match {
-        case LogicalNode.Select(projections) => ???
+      val b = Vector.newBuilder[Map[String, Any]]
+      evalNode(g)(ln, table){
+        rb => 
       }
+      Rs.fromIter(b.result())
 
     }
 
-    def evalNode[V, E](
+    private def evalNode[V, E](
       g: G[V, E]
     )(ln: LogicalNode, exprs: Map[Ref, LogicalNode])(
       cb: RecordBatch[V, E] => Unit
     ): Unit = ln match {
-      case sel: LogicalNode.Select => evalSelect(g)(sel, exprs)(cb)
+      case sel: LogicalNode.Project => evalSelect(g)(sel, exprs)(cb)
       case add: LogicalNode.AddNodes[V] @unchecked =>
         evalAddNode(add)(g)(cb)
     }
@@ -67,34 +68,21 @@ object EvalGraph {
 
     def evalSelect[V, E](
       g: G[V, E]
-    )(ln: LogicalNode.Select, exprs: Map[Ref, LogicalNode])(
+    )(ln: LogicalNode.Project, exprs: Map[Ref, LogicalNode])(
       cb: RecordBatch[V, E] => Unit
     ): Unit = ln match {
-      case LogicalNode.Select(Vector(LogicalNode.LNRef(ref), rest*)) =>
+      case LogicalNode.Project(LogicalNode.LNRef(ref)) =>
         val c = exprs(ref)
         evalNode(g)(c, exprs) { rb =>
           cb(rb.project(Set(ref)))
         }
-
-      case LogicalNode.Select(
-            Vector(LogicalNode.LNRef(ref1), LogicalNode.LNRef(ref2), rest*)
-          ) =>
-        val c1 = exprs(ref1)
-        val c2 = exprs(ref2)
-
-        val f1: (RecordBatch[V, E] => Unit) => Unit = evalNode(g)(c1, exprs)
-        val f2: (RecordBatch[V, E] => Unit) => Unit = evalNode(g)(c2, exprs)
-
-      // evalNode(g)(c1, exprs) { rb1 =>
-      //   cb(rb.project(Set(ref)))
-      // }
     }
 
     def evalAddNode[V, E](
       ln: LogicalNode.AddNodes[V]
     )(g: G[V, E])(cb: RecordBatch[V, E] => Unit) = {
-      val (col, g1) = Graph[G].addVertices(g)(Rs.fromIter(ln.vs))
-      cb(RecordBatch(Map(ln.ref -> col.toVector), g1))
+      // cb(RecordBatch(Map(ln.ref -> col.toVector), g1))
+      ???
     }
   }
 
@@ -105,14 +93,16 @@ object EvalGraph {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /**
-   * Summon an instance of [[EvalGraph]] for `G`.
-   */
-  @inline def apply[G[_, _]](implicit instance: EvalGraph[G]): EvalGraph[G] = instance
+  /** Summon an instance of [[EvalGraph]] for `G`.
+    */
+  @inline def apply[G[_, _]](implicit instance: EvalGraph[G]): EvalGraph[G] =
+    instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllEvalGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: EvalGraph[G]): AllOps[G, A, B] {
+    implicit def toAllEvalGraphOps[G[_, _], A, B](
+      target: G[A, B]
+    )(implicit tc: EvalGraph[G]): AllOps[G, A, B] {
       type TypeClassType = EvalGraph[G]
     } = new AllOps[G, A, B] {
       type TypeClassType = EvalGraph[G]
@@ -124,11 +114,16 @@ object EvalGraph {
     type TypeClassType <: EvalGraph[G]
     def self: G[A, B]
     val typeClassInstance: TypeClassType
-    def eval(q: Query[A, B, Ret]): Rs[Map[String, Any]] = typeClassInstance.eval[A, B](self)(q)
+    def eval(
+      start: LogicalNode,
+      table: Map[Ref, LogicalNode]
+    ): Rs[Map[String, Any]] = typeClassInstance.eval[A, B](self)(start, table)
   }
   trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
   trait ToEvalGraphOps extends Serializable {
-    implicit def toEvalGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: EvalGraph[G]): Ops[G, A, B] {
+    implicit def toEvalGraphOps[G[_, _], A, B](
+      target: G[A, B]
+    )(implicit tc: EvalGraph[G]): Ops[G, A, B] {
       type TypeClassType = EvalGraph[G]
     } = new Ops[G, A, B] {
       type TypeClassType = EvalGraph[G]
@@ -142,12 +137,5 @@ object EvalGraph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
-
-
-
-
-
-
-
 
 }

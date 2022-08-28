@@ -22,7 +22,7 @@ import scala.annotation.tailrec
 
 /** Result Set
   */
-sealed trait Rs[O] {
+sealed trait Rs[O] extends Any with Serializable{
   def to[C1](factory: Factory[O, C1]): C1
   def toList = to(List)
   def toVector = to(Vector)
@@ -86,7 +86,7 @@ object Rs {
       List.empty.to[C1](factory)
   }
 
-  case class IterableResultSet[O](vs: Iterable[O]) extends Rs[O] {
+  case class IterableResultSet[O](vs: Iterable[O]) extends AnyVal with Rs[O] {
     def to[C1](factory: Factory[O, C1]) =
       vs.to[C1](factory)
   }

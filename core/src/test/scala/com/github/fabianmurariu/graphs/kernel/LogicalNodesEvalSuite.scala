@@ -6,26 +6,26 @@ import com.github.fabianmurariu.graphs.data.dg.EntryIndex
 import com.github.fabianmurariu.graphs.ir.LogicalNode
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop._
-import com.github.fabianmurariu.graphs.ir.Query
 import com.github.fabianmurariu.graphs.ir.Node
 import org.scalacheck.Arbitrary
-import com.github.fabianmurariu.graphs.ir.Row
+import com.github.fabianmurariu.graphs.ir.Ref
 
-abstract class EvalGraphSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E]
+abstract class LogicalNodesEvalSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E]
     extends ScalaCheckSuite {
 
-  property("insert vertex".ignore) {
-
-    import Query._
+  import LogicalNode._
+  property("insert vertex then project") {
 
     forAll { (v: V) =>
 
-      //TODO: this needs a rethink, only the final object is valid as a query plan
-      val q = for {
-        add <- Query.AddVertex[V, E](Vector(v))
-      } yield Vector(add)
+      val add = new Node[V]
+      val root = Project(LNRef(add))
+      val table: Map[Ref, AddNodes[V]] =
+        Map(add -> AddNodes(Vector(v)))
 
-      val res = EvalGraph[G].eval(Graph[G].empty[V, E])(q)
+      val res = EvalGraph[G].eval(Graph[G].empty[V, E])(root, table)
+      assertEquals(res, Rs(Map("v_id" -> 0, "v" -> v)))
+      println(res)
     }
 
   }
@@ -33,7 +33,7 @@ abstract class EvalGraphSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E]
 }
 
 class UnsafeDirectedEvalGraphSuite
-    extends EvalGraphSuite[DirectedGraph[
+    extends LogicalNodesEvalSuite[DirectedGraph[
       *,
       *,
       LookupTable.ImmutableLookupTable,
