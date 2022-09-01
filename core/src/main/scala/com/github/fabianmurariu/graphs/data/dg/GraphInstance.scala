@@ -23,6 +23,7 @@ import com.github.fabianmurariu.graphs.kernel.Rs.IterableResultSet
 import com.github.fabianmurariu.graphs.syntax._
 
 import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     extends Graph[DirectedGraph[*, *, M, GG]] {
@@ -162,6 +163,6 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
         case _                 => None
       }
 
-  override def empty[V, E]: DirectedGraph[V, E, M, GG] =
+  override def empty[V, E:ClassTag]: DirectedGraph[V, E, M, GG] =
     new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
 }

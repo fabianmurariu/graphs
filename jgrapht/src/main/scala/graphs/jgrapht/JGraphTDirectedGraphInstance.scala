@@ -5,8 +5,7 @@ import org.jgrapht.graph.{DefaultDirectedGraph => DDG}
 import com.github.fabianmurariu.graphs.kernel.Rs
 import scala.jdk.CollectionConverters._
 import org.jgrapht.Graphs
-import org.jgrapht.util.SupplierUtil
-import java.util.function.Supplier
+import scala.reflect.ClassTag
 
 class JGraphTDirectedGraphInstance extends Graph[DDG] {
 
@@ -59,9 +58,8 @@ class JGraphTDirectedGraphInstance extends Graph[DDG] {
     else None
   }
 
-  override def empty[V, E]: DDG[V, E] = {
-    new DDG[V, E](SupplierUtil.OBJECT_SUPPLIER.asInstanceOf[Supplier[V]],
-                  SupplierUtil.OBJECT_SUPPLIER.asInstanceOf[Supplier[E]], false)
+  override def empty[V, E](implicit CT:ClassTag[E]): DDG[V, E] = {
+    new DDG[V, E](CT.runtimeClass.asInstanceOf[Class[E]])
   }
 
 }

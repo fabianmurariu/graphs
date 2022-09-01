@@ -20,6 +20,7 @@ import simulacrum.typeclass
 import scala.annotation.implicitNotFound
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
+import scala.reflect.ClassTag
 
 @implicitNotFound("Could not find an instance of Graph for ${G}")
 @typeclass
@@ -46,7 +47,7 @@ trait Graph[G[_, _]] extends Serializable { self =>
 
   def get[V, E](g: G[V, E])(v: V): Option[V]
 
-  def empty[V, E]: G[V, E]
+  def empty[V, E:ClassTag]: G[V, E]
 
   def dfsFold[V, E, B](g: G[V, E])(b: B, start: V)(f: (B, V) => B):B =
     fold[V, E, B, List](g)(b, start)(f)
@@ -136,6 +137,7 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
 
 
 

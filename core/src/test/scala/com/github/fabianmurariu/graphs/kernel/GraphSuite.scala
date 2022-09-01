@@ -21,8 +21,9 @@ import com.github.fabianmurariu.graphs.syntax._
 import munit.ScalaCheckSuite
 import org.scalacheck.Arbitrary
 import com.github.fabianmurariu.graphs.data.dg._
+import scala.reflect.ClassTag
 
-abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
+abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implicit
   G: Graph[G]
 ) extends ScalaCheckSuite {
 
@@ -172,7 +173,7 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
 
 }
 
-abstract class GraphSuiteNumeric[G[_, _], V: Arbitrary: Numeric, E: Arbitrary](
+abstract class GraphSuiteNumeric[G[_, _], V: Arbitrary: Numeric, E: Arbitrary: ClassTag](
   implicit G: Graph[G]
 ) extends ScalaCheckSuite {
 
