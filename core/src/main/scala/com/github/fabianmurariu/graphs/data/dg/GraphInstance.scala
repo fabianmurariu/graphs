@@ -16,11 +16,12 @@
 
 package com.github.fabianmurariu.graphs.data.dg
 
-import com.github.fabianmurariu.graphs.kernel.{Graph, GraphError}
+import com.github.fabianmurariu.graphs.kernel.Graph
 import com.github.fabianmurariu.graphs.kernel.Rs
 import com.github.fabianmurariu.graphs.kernel.Rs.EmptyResultSet
 import com.github.fabianmurariu.graphs.kernel.Rs.IterableResultSet
 import com.github.fabianmurariu.graphs.syntax._
+
 import scala.annotation.tailrec
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
@@ -111,14 +112,6 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     val b = Vector.newBuilder[V]
     val g1 = loop(vs.iterator, b, g)
     Rs.fromIter(b.result()) -> g1
-  }
-
-  override def addEdges[V, E](g: DirectedGraph[V, E, M, GG])(
-    src: Rs[V],
-    dst: Rs[V],
-    e: Rs[E]
-  ): Either[GraphError, DirectedGraph[V, E, M, GG]] = {
-    Left(GraphError.AddEdgeFailed("boom!"))
   }
 
   override def addEdge[V, E](

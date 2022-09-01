@@ -28,13 +28,18 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
 
   property("we can get a node back when the graph is not empty") {
     forAll { (vs: Set[V]) =>
-      val g = G.empty[V, E]
+      (vs.nonEmpty) ==> {
 
-      val g1 = vs.foldLeft(g) { (g, v) =>
-        g.addVertex(v)
+        val g = G.empty[V, E]
+
+        vs.foreach(v => assertEquals(g.get(v), None))
+
+        val g1 = vs.foldLeft(g) { (g, v) =>
+          g.addVertex(v)
+        }
+
+        vs.foreach(v => assertEquals(g1.get(v), Some(v)))
       }
-
-      vs.forall(v => g1.get(v).nonEmpty) && vs.forall(v => g.get(v).isEmpty)
     }
   }
 
@@ -59,6 +64,17 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
       }
     }
   }
+
+  test("wha!".only) {
+    val g = Vector(1, 2, 3).foldLeft(G.empty[Int, String])(_ addVertex _)
+    // val g = G.empty[Int, String].addVertex(Rs.fromIter(Vector(1, 2, 3)))
+    g.addEdge(2, 1, "one")
+    g.addEdge(2, 3, "one")
+
+    val rs = Rs(2)
+    assertEquals(g.out(rs).toVector, Vector(1, 3))
+  }
+
   property(
     "graph can represent a star graph where one node points to all the others"
   ) {
@@ -70,9 +86,9 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary](implicit
         }
         val rs = Rs(v)
 
-        assertEquals(g.out(rs).size, vs.size)
-        assertEquals(g.out(rs).toSet, vs)
         assertEquals(g.vertices.toSet, vs + v)
+        assertEquals(g.out(rs).toSet, vs, s"${g.out(rs).toSet} != $vs" )
+        assertEquals(g.out(rs).size, vs.size)
         vs.forall { v =>
           g.in(Rs(v)).size == 1
         }

@@ -21,7 +21,7 @@ val Scala3 = "3.1.1"
 ThisBuild / crossScalaVersions := Seq(Scala213, Scala3)
 ThisBuild / scalaVersion := Scala213 // the default Scala
 
-lazy val root = tlCrossRootProject.aggregate(core, benchmarks)
+lazy val root = tlCrossRootProject.aggregate(core, jgrapht, benchmarks)
 
 lazy val simulacrumSettings = Seq(
   libraryDependencies ++= (if (tlIsScala3.value) Nil
@@ -44,21 +44,19 @@ lazy val simulacrumSettings = Seq(
   libraryDependencies += "org.typelevel" %% "simulacrum-scalafix-annotations" % "0.5.4"
 )
 
-lazy val macroSettings = Seq(
-  libraryDependencies ++= {
-    if (tlIsScala3.value)
-      Nil
-    else
-      Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided)
-  }
-)
+lazy val macroSettings = Seq(libraryDependencies ++= {
+  if (tlIsScala3.value)
+    Nil
+  else
+    Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided)
+})
 
 lazy val core = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
   .settings(simulacrumSettings, macroSettings)
   .settings(
-    name := "core",
+    name := "graphs-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % "2.7.0",
       "org.typelevel" %%% "cats-free" % "2.7.0",
@@ -67,7 +65,21 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
       "org.scalameta" %%% "munit-scalacheck" % "0.7.29" % Test,
       "org.typelevel" %%% "munit-cats-effect-3" % "1.0.7" % Test,
       "org.typelevel" %%% "scalacheck-effect-munit" % "1.0.4" % Test,
-      "org.scodec" %%% "scodec-core" % (if (scalaVersion.value.startsWith("2.")) "1.11.9" else "2.1.0")
+      "org.scodec" %%% "scodec-core" % (if (scalaVersion.value.startsWith("2."))
+                                          "1.11.9"
+                                        else "2.1.0")
+    )
+  )
+
+lazy val jgrapht = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("jgrapht"))
+  .settings(simulacrumSettings, macroSettings)
+  .dependsOn(core % "test->test;compile->compile")
+  .settings(
+    name := "graphs-jgrapht",
+    libraryDependencies ++= Seq(
+      "org.jgrapht" % "jgrapht-core" % "1.5.1"
     )
   )
 
@@ -76,9 +88,9 @@ lazy val benchmarks = crossProject(JVMPlatform)
   .in(file("benchmarks"))
   .settings(simulacrumSettings, macroSettings)
   .enablePlugins(JmhPlugin)
-  .dependsOn(core)
+  .dependsOn(core, jgrapht)
   .settings(
-    name := "benchmarks"
+    name := "graphs-benchmarks"
   )
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)

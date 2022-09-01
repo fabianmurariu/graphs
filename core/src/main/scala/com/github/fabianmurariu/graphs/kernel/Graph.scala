@@ -37,13 +37,10 @@ trait Graph[G[_, _]] extends Serializable { self =>
   def vertices[V, E](g: G[V, E]): Rs[V]
 
   def addVertex[V, E](g: G[V, E])(v: V): G[V, E]
-  def addVertices[V, E](g: G[V, E])(v: Rs[V]): (Rs[V], G[V, E])
-  
-  def addEdges[V, E](
-    g: G[V, E]
-  )(src: Rs[V], dst: Rs[V], e: Rs[E]): Either[GraphError, G[V, E]]
   def addEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E]
 
+  def addVertices[V, E](g: G[V, E])(v: Rs[V]): (Rs[V], G[V, E])
+  
   def removeVertex[V, E](g: G[V, E])(v: V): G[V, E]
   def removeEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E]
 
@@ -114,9 +111,8 @@ object Graph {
     def isEmpty: Boolean = typeClassInstance.isEmpty[A, B](self)
     def vertices: Rs[A] = typeClassInstance.vertices[A, B](self)
     def addVertex(v: A): G[A, B] = typeClassInstance.addVertex[A, B](self)(v)
-    def addVertices(v: Rs[A]): (Rs[A], G[A, B]) = typeClassInstance.addVertices[A, B](self)(v)
-    def addEdges(src: Rs[A], dst: Rs[A], e: Rs[B]): Either[GraphError, G[A, B]] = typeClassInstance.addEdges[A, B](self)(src, dst, e)
     def addEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.addEdge[A, B](self)(src, dst, e)
+    def addVertices(v: Rs[A]): (Rs[A], G[A, B]) = typeClassInstance.addVertices[A, B](self)(v)
     def removeVertex(v: A): G[A, B] = typeClassInstance.removeVertex[A, B](self)(v)
     def removeEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.removeEdge[A, B](self)(src, dst, e)
     def get(v: A): Option[A] = typeClassInstance.get[A, B](self)(v)
@@ -140,6 +136,7 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
 
 
 

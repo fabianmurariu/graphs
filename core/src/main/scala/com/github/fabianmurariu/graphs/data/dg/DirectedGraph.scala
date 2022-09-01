@@ -18,7 +18,7 @@ package com.github.fabianmurariu.graphs.data.dg
 
 import com.github.fabianmurariu.graphs.kernel.Graph
 
-/** This Graph is unsafe because it leaks internal ids it is mutable and does
+/** This Graph is unsafe because it leaks internal ids it can be mutable and does
   * not support concurrent access
   *
   * @param vTable
@@ -65,21 +65,6 @@ case class VecStore[E](
 
   override def appendPair(v: Int, e: E): AdjacencyStore[E] =
     this.copy(vs = vs :+ v, props :+ e)
-
-}
-
-trait NodeIndex[V, E] {
-  def size: Int
-
-  def getVertex(id: Int): VertexEntry[V, E]
-}
-
-case class VecNodeIndex[V, E](ves: Vector[VertexEntry[V, E]])
-    extends NodeIndex[V, E] {
-
-  def size: Int = ves.size
-
-  def getVertex(id: Int): VertexEntry[V, E] = ves(id)
 
 }
 
