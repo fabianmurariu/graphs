@@ -78,9 +78,7 @@ lazy val jgrapht = crossProject(JVMPlatform)
   .dependsOn(core % "test->test;compile->compile")
   .settings(
     name := "graphs-jgrapht",
-    libraryDependencies ++= Seq(
-      "org.jgrapht" % "jgrapht-core" % "1.5.1"
-    )
+    libraryDependencies ++= Seq("org.jgrapht" % "jgrapht-core" % "1.5.1")
   )
 
 lazy val benchmarks = crossProject(JVMPlatform)
@@ -89,8 +87,6 @@ lazy val benchmarks = crossProject(JVMPlatform)
   .settings(simulacrumSettings, macroSettings)
   .enablePlugins(JmhPlugin)
   .dependsOn(core, jgrapht)
-  .settings(
-    name := "graphs-benchmarks"
-  )
+  .settings(name := "graphs-benchmarks")
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)
