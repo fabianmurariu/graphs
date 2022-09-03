@@ -66,16 +66,6 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implici
     }
   }
 
-  test("wha!".only) {
-    val g = Vector(1, 2, 3).foldLeft(G.empty[Int, String])(_ addVertex _)
-    // val g = G.empty[Int, String].addVertex(Rs.fromIter(Vector(1, 2, 3)))
-    g.addEdge(2, 1, "one")
-    g.addEdge(2, 3, "one")
-
-    val rs = Rs(2)
-    assertEquals(g.out(rs).toVector, Vector(1, 3))
-  }
-
   property(
     "graph can represent a star graph where one node points to all the others"
   ) {
@@ -154,7 +144,7 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implici
   }
 
   property(
-    "load a heap and traverse with bfs should result in the same order"
+    "load a heap and traverse with bfs should result in the same order".only
   ) {
     forAll { (vSet: Set[V], e: E) =>
 
