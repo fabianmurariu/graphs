@@ -144,7 +144,7 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implici
   }
 
   property(
-    "load a heap and traverse with bfs should result in the same order".only
+    "load a heap and traverse with bfs should result in the same order".ignore
   ) {
     forAll { (vSet: Set[V], e: E) =>
 
