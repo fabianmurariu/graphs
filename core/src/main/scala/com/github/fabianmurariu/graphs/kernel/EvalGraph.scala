@@ -41,8 +41,7 @@ object EvalGraph {
       // start exploring the tree in a DFS fashion
 
       val b = Vector.newBuilder[Map[String, Any]]
-      evalNode(g)(ln, table) { rb =>
-      }
+      evalNode(g)(ln, table) { rb => }
       Rs.fromIter(b.result())
 
     }
