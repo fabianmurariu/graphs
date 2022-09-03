@@ -23,8 +23,8 @@ import org.scalacheck.Arbitrary
 import com.github.fabianmurariu.graphs.data.dg._
 import scala.reflect.ClassTag
 
-abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implicit
-  G: Graph[G]
+abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](
+  implicit G: Graph[G]
 ) extends ScalaCheckSuite {
 
   property("we can get a node back when the graph is not empty") {
@@ -78,7 +78,7 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implici
         val rs = Rs(v)
 
         assertEquals(g.vertices.toSet, vs + v)
-        assertEquals(g.out(rs).toSet, vs, s"${g.out(rs).toSet} != $vs" )
+        assertEquals(g.out(rs).toSet, vs, s"${g.out(rs).toSet} != $vs")
         assertEquals(g.out(rs).size, vs.size)
         vs.forall { v =>
           g.in(Rs(v)).size == 1
@@ -163,9 +163,11 @@ abstract class GraphSuite[G[_, _], V: Arbitrary, E: Arbitrary: ClassTag](implici
 
 }
 
-abstract class GraphSuiteNumeric[G[_, _], V: Arbitrary: Numeric, E: Arbitrary: ClassTag](
-  implicit G: Graph[G]
-) extends ScalaCheckSuite {
+abstract class GraphSuiteNumeric[G[
+  _,
+  _
+], V: Arbitrary: Numeric, E: Arbitrary: ClassTag](implicit G: Graph[G])
+    extends ScalaCheckSuite {
 
   property("can traverse and sum all the nodes in a path graph") {
     forAll { (vs: Set[V], e: E) =>

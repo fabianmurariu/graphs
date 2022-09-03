@@ -27,7 +27,10 @@ import org.scalacheck.Arbitrary
 import com.github.fabianmurariu.graphs.ir.Ref
 import scala.reflect.ClassTag
 
-abstract class LogicalNodesEvalSuite[G[_, _]: Graph: EvalGraph, V: Arbitrary, E:ClassTag]
+abstract class LogicalNodesEvalSuite[G[
+  _,
+  _
+]: Graph: EvalGraph, V: Arbitrary, E: ClassTag]
     extends ScalaCheckSuite {
 
   import LogicalNode._

@@ -18,8 +18,8 @@ package com.github.fabianmurariu.graphs.data.dg
 
 import com.github.fabianmurariu.graphs.kernel.Graph
 
-/** This Graph is unsafe because it leaks internal ids it can be mutable and does
-  * not support concurrent access
+/** This Graph is unsafe because it leaks internal ids it can be mutable and
+  * does not support concurrent access
   *
   * @param vTable
   * @param store

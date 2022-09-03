@@ -60,14 +60,17 @@ object TraverseSupport {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /**
-   * Summon an instance of [[TraverseSupport]] for `F`.
-   */
-  @inline def apply[F[_]](implicit instance: TraverseSupport[F]): TraverseSupport[F] = instance
+  /** Summon an instance of [[TraverseSupport]] for `F`.
+    */
+  @inline def apply[F[_]](implicit
+    instance: TraverseSupport[F]
+  ): TraverseSupport[F] = instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllTraverseSupportOps[F[_], A](target: F[A])(implicit tc: TraverseSupport[F]): AllOps[F, A] {
+    implicit def toAllTraverseSupportOps[F[_], A](
+      target: F[A]
+    )(implicit tc: TraverseSupport[F]): AllOps[F, A] {
       type TypeClassType = TraverseSupport[F]
     } = new AllOps[F, A] {
       type TypeClassType = TraverseSupport[F]
@@ -84,7 +87,9 @@ object TraverseSupport {
   }
   trait AllOps[F[_], A] extends Ops[F, A]
   trait ToTraverseSupportOps extends Serializable {
-    implicit def toTraverseSupportOps[F[_], A](target: F[A])(implicit tc: TraverseSupport[F]): Ops[F, A] {
+    implicit def toTraverseSupportOps[F[_], A](
+      target: F[A]
+    )(implicit tc: TraverseSupport[F]): Ops[F, A] {
       type TypeClassType = TraverseSupport[F]
     } = new Ops[F, A] {
       type TypeClassType = TraverseSupport[F]
@@ -98,6 +103,5 @@ object TraverseSupport {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
-
 
 }

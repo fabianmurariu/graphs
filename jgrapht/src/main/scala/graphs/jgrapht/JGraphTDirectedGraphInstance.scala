@@ -21,7 +21,7 @@ import com.github.fabianmurariu.graphs.kernel.Rs
 import scala.jdk.CollectionConverters._
 import org.jgrapht.Graphs
 import scala.reflect.ClassTag
-import graphs.jgrapht.{JGraphT, JEdge}
+import graphs.jgrapht.{JEdge, JGraphT}
 import org.jgrapht.graph.DefaultDirectedGraph
 
 class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
@@ -30,21 +30,32 @@ class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
     // println(s"${Graphs.neighborListOf(g.graph, vs.toList.head)} ${g.graph.outgoingEdgesOf(vs.toList.head)}")
 
     val out = vs
-      .map(v => g.graph.outgoingEdgesOf(v).asScala.map(e => Graphs.getOppositeVertex(g.graph, e, v)))
-      .foldLeft(Vector.newBuilder[V]) {_ ++= _}
+      .map(v =>
+        g.graph
+          .outgoingEdgesOf(v)
+          .asScala
+          .map(e => Graphs.getOppositeVertex(g.graph, e, v))
+      )
+      .foldLeft(Vector.newBuilder[V]) { _ ++= _ }
       .result()
     Rs.fromIter(out)
   }
 
   override def in[V, E](g: JGraphT[V, E])(vs: Rs[V]): Rs[V] = {
     val out = vs
-      .map(v => g.graph.incomingEdgesOf(v).asScala.map(e => Graphs.getOppositeVertex(g.graph, e, v)))
-      .foldLeft(Vector.newBuilder[V]) {_ ++= _}
+      .map(v =>
+        g.graph
+          .incomingEdgesOf(v)
+          .asScala
+          .map(e => Graphs.getOppositeVertex(g.graph, e, v))
+      )
+      .foldLeft(Vector.newBuilder[V]) { _ ++= _ }
       .result()
     Rs.fromIter(out)
   }
 
-  override def isEmpty[V, E](g: JGraphT[V, E]): Boolean = g.graph.vertexSet().isEmpty()
+  override def isEmpty[V, E](g: JGraphT[V, E]): Boolean =
+    g.graph.vertexSet().isEmpty()
 
   override def vertices[V, E](g: JGraphT[V, E]): Rs[V] = {
     Rs.fromIter(g.graph.vertexSet().asScala)
@@ -55,12 +66,16 @@ class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
     g
   }
 
-  override def addEdge[V, E](g: JGraphT[V, E])(src: V, dst: V, e: E): JGraphT[V, E] ={
+  override def addEdge[V, E](
+    g: JGraphT[V, E]
+  )(src: V, dst: V, e: E): JGraphT[V, E] = {
     g.graph.addEdge(src, dst, new JEdge(e))
     g
   }
 
-  override def addVertices[V, E](g: JGraphT[V, E])(v: Rs[V]): (Rs[V], JGraphT[V, E]) =
+  override def addVertices[V, E](g: JGraphT[V, E])(
+    v: Rs[V]
+  ): (Rs[V], JGraphT[V, E]) =
     ???
 
   override def removeVertex[V, E](g: JGraphT[V, E])(v: V): JGraphT[V, E] = {
@@ -68,7 +83,9 @@ class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
     g
   }
 
-  override def removeEdge[V, E](g: JGraphT[V, E])(src: V, dst: V, e: E): JGraphT[V, E] =
+  override def removeEdge[V, E](
+    g: JGraphT[V, E]
+  )(src: V, dst: V, e: E): JGraphT[V, E] =
     ???
 
   override def get[V, E](g: JGraphT[V, E])(v: V): Option[V] = {
@@ -76,7 +93,7 @@ class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
     else None
   }
 
-  override def empty[V, E](implicit CT:ClassTag[E]): JGraphT[V, E] = {
+  override def empty[V, E](implicit CT: ClassTag[E]): JGraphT[V, E] = {
     JGraphT[V, E](new DefaultDirectedGraph(classOf[JEdge[E]]))
   }
 

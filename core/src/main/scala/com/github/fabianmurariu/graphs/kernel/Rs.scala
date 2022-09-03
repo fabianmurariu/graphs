@@ -22,7 +22,7 @@ import scala.annotation.tailrec
 
 /** Result Set
   */
-sealed trait Rs[O] extends Any with Serializable{
+sealed trait Rs[O] extends Any with Serializable {
   def to[C1](factory: Factory[O, C1]): C1
   def toList = to(List)
   def toVector = to(Vector)
@@ -58,7 +58,11 @@ sealed trait Rs[O] extends Any with Serializable{
   def ++(other: Rs[O]): Rs[O] =
     (this, other) match {
       case (l: Rs.IdResultSet[_, O] @unchecked, r: Rs.IdResultSet[_, O]) =>
-        Rs.IdResultSet(l.vs ++ r.vs, l.e ++ r.e, l.f) // keep operating on ids and defer applying f
+        Rs.IdResultSet(
+          l.vs ++ r.vs,
+          l.e ++ r.e,
+          l.f
+        ) // keep operating on ids and defer applying f
       case (Rs.IterableResultSet(vs), Rs.IterableResultSet(vsOther)) =>
         Rs.IterableResultSet(vs ++ vsOther)
       case (ids: Rs.IdResultSet[_, O] @unchecked, right) =>
