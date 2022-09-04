@@ -84,7 +84,7 @@ object EvalGraph {
     }
   }
 
-  implicit def evalGraphForGraph[G[_, _]: Graph] =
+  implicit def evalGraphForGraph[G[_, _]: Graph]: DefaultEvalGraphForGraph[G] =
     new DefaultEvalGraphForGraph[G]
 
   /* ======================================================================== */

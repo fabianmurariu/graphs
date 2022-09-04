@@ -34,7 +34,7 @@ abstract class LogicalNodesEvalSuite[G[
     extends ScalaCheckSuite {
 
   import LogicalNode._
-  property("insert vertex then project") {
+  property("insert vertex then project".ignore) {
 
     forAll { (v: V) =>
 

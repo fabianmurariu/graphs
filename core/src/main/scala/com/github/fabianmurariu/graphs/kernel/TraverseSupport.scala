@@ -33,17 +33,18 @@ trait TraverseSupport[F[_]] extends Serializable {
 
 object TraverseSupport {
 
-  implicit val queueInstance = new TraverseSupport[Queue] {
+  implicit val queueInstance: TraverseSupport[Queue] =
+    new TraverseSupport[Queue] {
 
-    override def push[A](f: Queue[A])(a: A): Queue[A] = f.enqueue(a)
+      override def push[A](f: Queue[A])(a: A): Queue[A] = f.enqueue(a)
 
-    override def pop[A](f: Queue[A]): Option[(A, Queue[A])] = f.dequeueOption
+      override def pop[A](f: Queue[A]): Option[(A, Queue[A])] = f.dequeueOption
 
-    override def fromIter[A](iter: Iterable[A]): Queue[A] = Queue.from(iter)
+      override def fromIter[A](iter: Iterable[A]): Queue[A] = Queue.from(iter)
 
-  }
+    }
 
-  implicit val listInstance = new TraverseSupport[List] {
+  implicit val listInstance: TraverseSupport[List] = new TraverseSupport[List] {
 
     override def push[A](f: List[A])(a: A): List[A] = a :: f
 

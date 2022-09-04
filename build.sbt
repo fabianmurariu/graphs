@@ -23,6 +23,13 @@ ThisBuild / scalaVersion := Scala213 // the default Scala
 
 lazy val root = tlCrossRootProject.aggregate(core, jgrapht, benchmarks)
 
+ThisBuild / scalacOptions ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((3, _)) => Seq("-Ykind-projector:underscores")
+    case Some((2, 12 | 13)) => Seq("-Xsource:3", "-P:kind-projector:underscore-placeholders")
+  }
+}
+
 lazy val simulacrumSettings = Seq(
   libraryDependencies ++= (if (tlIsScala3.value) Nil
                            else Seq(compilerPlugin(scalafixSemanticdb))),
@@ -34,13 +41,6 @@ lazy val simulacrumSettings = Seq(
         "-Yrangepos"
       )
   ),
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) => Seq("-Ykind-projector:underscores")
-      case Some((2, 12 | 13)) =>
-        Seq("-Xsource:3", "-P:kind-projector:underscore-placeholders")
-    }
-  },
   libraryDependencies += "org.typelevel" %% "simulacrum-scalafix-annotations" % "0.5.4"
 )
 
