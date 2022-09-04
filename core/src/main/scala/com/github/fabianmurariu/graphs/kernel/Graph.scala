@@ -28,6 +28,17 @@ trait Graph[G[_, _]] extends Serializable { self =>
   def out[V, E](g: G[V, E])(vs: Rs[V]): Rs[V]
   def in[V, E](g: G[V, E])(vs: Rs[V]): Rs[V]
 
+
+  def outE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)]
+  def inE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)]
+
+  def neighbours[V, E](g: G[V, E])(vs: Rs[V]): Rs[V] =
+    out(g)(vs) ++ in(g)(vs)
+
+
+  def neighboursE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] =
+    outE(g)(vs) ++ inE(g)(vs)
+
   def outDegree[V, E](g: G[V, E])(vs: Rs[V]): Int =
     self.out(g)(vs).size
 
