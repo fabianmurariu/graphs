@@ -24,15 +24,22 @@ import com.github.fabianmurariu.graphs.kernel.Graph
   * @param vTable
   * @param store
   */
-case class DirectedGraph[V, E, M[_], G[V, E]](table: M[V], index: G[V, E])
+case class DirectedGraph[M[_], G[V, E], V, E](table: M[V], index: G[V, E])
 
 object DirectedGraph {
 
-  def empty[V, E, M[_]: LookupTable, G[_, _]: EntryIndex] =
+  def default[V, E] = empty[
+    LookupTable.ImmutableLookupTable,
+    EntryIndex.ImmutableEntryIndex,
+    V,
+    E
+  ]
+
+  def empty[M[_]: LookupTable, G[_, _]: EntryIndex, V, E] =
     new DirectedGraph(LookupTable[M].empty[V], EntryIndex[G].empty[V, E])
 
   implicit def graph[M[_]: LookupTable, GG[_, _]: EntryIndex]
-    : Graph[DirectedGraph[*, *, M, GG]] = new GraphInstance[M, GG]
+    : Graph[DirectedGraph[M, GG, *, *]] = new GraphInstance[M, GG]
 
 }
 

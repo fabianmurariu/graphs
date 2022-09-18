@@ -22,11 +22,11 @@ import scala.annotation.tailrec
 
 /** Result Set
   */
-sealed trait Rs[O] extends Any with Serializable {
-  def to[C1](factory: Factory[O, C1]): C1
-  def toList = to(List)
-  def toVector = to(Vector)
-  def toSet = to(Set)
+sealed trait Rs[O] extends Iterable[O] with Serializable {
+  override def to[C1](factory: Factory[O, C1]): C1
+  // def toList = to(List)
+  // def toVector = to(Vector)
+  // def toSet = to(Set)
 
   def iterator: Iterator[O] = this match {
     case Rs.EmptyResultSet()      => Iterator.empty
@@ -35,21 +35,21 @@ sealed trait Rs[O] extends Any with Serializable {
       ids.iterator.map(f)
   }
 
-  def map[A](f: O => A): Rs[A] = this match {
+  override def map[A](f: O => A): Rs[A] = this match {
     case empty @ Rs.EmptyResultSet() => empty.asInstanceOf[Rs[A]]
     case Rs.IterableResultSet(vs)    => Rs.IterableResultSet(vs.map(f))
     case ids @ Rs.IdResultSet(_, _, _) =>
       Rs.IterableResultSet(ids.to(Vector).map(f))
   }
 
-  def foldLeft[B](b: B)(f: (B, O) => B): B = this match {
+  override def foldLeft[B](b: B)(f: (B, O) => B): B = this match {
     case Rs.IterableResultSet(vs) => vs.foldLeft(b)(f)
     case ids: Rs.IdResultSet[_, O] =>
       ids.vs.map(ids.f).foldLeft(b)(f)
     case _ => b
   }
 
-  def size: Int = this match {
+  override def size: Int = this match {
     case Rs.EmptyResultSet()      => 0
     case Rs.IterableResultSet(vs) => vs.size
     case Rs.IdResultSet(vs, _, _) => vs.size
@@ -86,12 +86,12 @@ object Rs {
   def empty[O]: Rs[O] = EmptyResultSet()
 
   case class EmptyResultSet[O]() extends Rs[O] {
-    def to[C1](factory: Factory[O, C1]) =
+    override def to[C1](factory: Factory[O, C1]) =
       List.empty.to[C1](factory)
   }
 
-  case class IterableResultSet[O](vs: Iterable[O]) extends AnyVal with Rs[O] {
-    def to[C1](factory: Factory[O, C1]) =
+  case class IterableResultSet[O](vs: Iterable[O]) extends Rs[O] {
+    override def to[C1](factory: Factory[O, C1]) =
       vs.to[C1](factory)
   }
 

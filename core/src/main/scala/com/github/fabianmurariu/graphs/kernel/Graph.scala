@@ -95,15 +95,14 @@ object Graph {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /** Summon an instance of [[Graph]] for `G`.
-    */
+  /**
+   * Summon an instance of [[Graph]] for `G`.
+   */
   @inline def apply[G[_, _]](implicit instance: Graph[G]): Graph[G] = instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: Graph[G]): AllOps[G, A, B] {
+    implicit def toAllGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): AllOps[G, A, B] {
       type TypeClassType = Graph[G]
     } = new AllOps[G, A, B] {
       type TypeClassType = Graph[G]
@@ -117,33 +116,27 @@ object Graph {
     val typeClassInstance: TypeClassType
     def out(vs: Rs[A]): Rs[A] = typeClassInstance.out[A, B](self)(vs)
     def in(vs: Rs[A]): Rs[A] = typeClassInstance.in[A, B](self)(vs)
+    def outE(vs: Rs[A]): Rs[(B, A)] = typeClassInstance.outE[A, B](self)(vs)
+    def inE(vs: Rs[A]): Rs[(B, A)] = typeClassInstance.inE[A, B](self)(vs)
+    def neighbours(vs: Rs[A]): Rs[A] = typeClassInstance.neighbours[A, B](self)(vs)
+    def neighboursE(vs: Rs[A]): Rs[(B, A)] = typeClassInstance.neighboursE[A, B](self)(vs)
     def outDegree(vs: Rs[A]): Int = typeClassInstance.outDegree[A, B](self)(vs)
     def inDegree(vs: Rs[A]): Int = typeClassInstance.inDegree[A, B](self)(vs)
     def isEmpty: Boolean = typeClassInstance.isEmpty[A, B](self)
     def vertices: Rs[A] = typeClassInstance.vertices[A, B](self)
     def addVertex(v: A): G[A, B] = typeClassInstance.addVertex[A, B](self)(v)
-    def addEdge(src: A, dst: A, e: B): G[A, B] =
-      typeClassInstance.addEdge[A, B](self)(src, dst, e)
-    def addVertices(v: Rs[A]): (Rs[A], G[A, B]) =
-      typeClassInstance.addVertices[A, B](self)(v)
-    def removeVertex(v: A): G[A, B] =
-      typeClassInstance.removeVertex[A, B](self)(v)
-    def removeEdge(src: A, dst: A, e: B): G[A, B] =
-      typeClassInstance.removeEdge[A, B](self)(src, dst, e)
+    def addEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.addEdge[A, B](self)(src, dst, e)
+    def addVertices(v: Rs[A]): (Rs[A], G[A, B]) = typeClassInstance.addVertices[A, B](self)(v)
+    def removeVertex(v: A): G[A, B] = typeClassInstance.removeVertex[A, B](self)(v)
+    def removeEdge(src: A, dst: A, e: B): G[A, B] = typeClassInstance.removeEdge[A, B](self)(src, dst, e)
     def get(v: A): Option[A] = typeClassInstance.get[A, B](self)(v)
-    def dfsFold[C](b: C, start: A)(f: (C, A) => C): C =
-      typeClassInstance.dfsFold[A, B, C](self)(b, start)(f)
-    def bfsFold[C](b: C, start: A)(f: (C, A) => C): C =
-      typeClassInstance.bfsFold[A, B, C](self)(b, start)(f)
-    def fold[C, M[_]](b: C, start: A)(f: (C, A) => C)(implicit
-      TS: TraverseSupport[M]
-    ): C = typeClassInstance.fold[A, B, C, M](self)(b, start)(f)(TS)
+    def dfsFold[C](b: C, start: A)(f: (C, A) => C): C = typeClassInstance.dfsFold[A, B, C](self)(b, start)(f)
+    def bfsFold[C](b: C, start: A)(f: (C, A) => C): C = typeClassInstance.bfsFold[A, B, C](self)(b, start)(f)
+    def fold[C, M[_]](b: C, start: A)(f: (C, A) => C)(implicit TS: TraverseSupport[M]): C = typeClassInstance.fold[A, B, C, M](self)(b, start)(f)(TS)
   }
   trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
   trait ToGraphOps extends Serializable {
-    implicit def toGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: Graph[G]): Ops[G, A, B] {
+    implicit def toGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: Graph[G]): Ops[G, A, B] {
       type TypeClassType = Graph[G]
     } = new Ops[G, A, B] {
       type TypeClassType = Graph[G]
@@ -157,5 +150,6 @@ object Graph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
 
 }

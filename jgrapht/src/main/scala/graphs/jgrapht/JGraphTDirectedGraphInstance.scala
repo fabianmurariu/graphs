@@ -26,9 +26,12 @@ import org.jgrapht.graph.DefaultDirectedGraph
 
 class JGraphTDirectedGraphInstance extends Graph[JGraphT] {
 
-  override def out[V, E](g: JGraphT[V, E])(vs: Rs[V]): Rs[V] = {
-    // println(s"${Graphs.neighborListOf(g.graph, vs.toList.head)} ${g.graph.outgoingEdgesOf(vs.toList.head)}")
+  override def outE[V, E](g: JGraphT[V,E])(vs: Rs[V]): Rs[(E, V)] = ???
 
+  override def inE[V, E](g: JGraphT[V,E])(vs: Rs[V]): Rs[(E, V)] = ???
+
+
+  override def out[V, E](g: JGraphT[V, E])(vs: Rs[V]): Rs[V] = {
     val out = vs
       .map(v =>
         g.graph

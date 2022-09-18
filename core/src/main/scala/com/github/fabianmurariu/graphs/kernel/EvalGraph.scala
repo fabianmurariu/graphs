@@ -91,16 +91,14 @@ object EvalGraph {
   /* THE FOLLOWING CODE IS MANAGED BY SIMULACRUM; PLEASE DO NOT EDIT!!!!      */
   /* ======================================================================== */
 
-  /** Summon an instance of [[EvalGraph]] for `G`.
-    */
-  @inline def apply[G[_, _]](implicit instance: EvalGraph[G]): EvalGraph[G] =
-    instance
+  /**
+   * Summon an instance of [[EvalGraph]] for `G`.
+   */
+  @inline def apply[G[_, _]](implicit instance: EvalGraph[G]): EvalGraph[G] = instance
 
   @deprecated("Use graph.syntax object imports", "2.2.0")
   object ops {
-    implicit def toAllEvalGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: EvalGraph[G]): AllOps[G, A, B] {
+    implicit def toAllEvalGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: EvalGraph[G]): AllOps[G, A, B] {
       type TypeClassType = EvalGraph[G]
     } = new AllOps[G, A, B] {
       type TypeClassType = EvalGraph[G]
@@ -112,16 +110,11 @@ object EvalGraph {
     type TypeClassType <: EvalGraph[G]
     def self: G[A, B]
     val typeClassInstance: TypeClassType
-    def eval(
-      start: LogicalNode,
-      table: Map[Ref, LogicalNode]
-    ): Rs[Map[String, Any]] = typeClassInstance.eval[A, B](self)(start, table)
+    def eval(start: LogicalNode, table: Map[Ref, LogicalNode]): Rs[Map[String, Any]] = typeClassInstance.eval[A, B](self)(start, table)
   }
   trait AllOps[G[_, _], A, B] extends Ops[G, A, B]
   trait ToEvalGraphOps extends Serializable {
-    implicit def toEvalGraphOps[G[_, _], A, B](
-      target: G[A, B]
-    )(implicit tc: EvalGraph[G]): Ops[G, A, B] {
+    implicit def toEvalGraphOps[G[_, _], A, B](target: G[A, B])(implicit tc: EvalGraph[G]): Ops[G, A, B] {
       type TypeClassType = EvalGraph[G]
     } = new Ops[G, A, B] {
       type TypeClassType = EvalGraph[G]
@@ -135,5 +128,6 @@ object EvalGraph {
   /* ======================================================================== */
   /* END OF SIMULACRUM-MANAGED CODE                                           */
   /* ======================================================================== */
+
 
 }

@@ -54,8 +54,8 @@ abstract class LogicalNodesEvalSuite[G[
 
 class UnsafeDirectedEvalGraphSuite
     extends LogicalNodesEvalSuite[DirectedGraph[
-      *,
-      *,
       LookupTable.ImmutableLookupTable,
-      EntryIndex.ImmutableEntryIndex
+      EntryIndex.ImmutableEntryIndex,
+      *,
+      *
     ], String, Int]

@@ -194,18 +194,18 @@ abstract class GraphSuiteNumeric[G[
 
 class UnsafeDirectedGraphSuite
     extends GraphSuite[DirectedGraph[
-      *,
-      *,
       LookupTable.ImmutableLookupTable,
-      EntryIndex.ImmutableEntryIndex
+      EntryIndex.ImmutableEntryIndex,
+      *,
+      *
     ], String, Int]
 
 class UnsafeDirectedGraphSuiteNum
     extends GraphSuiteNumeric[DirectedGraph[
-      *,
-      *,
       LookupTable.ImmutableLookupTable,
-      EntryIndex.ImmutableEntryIndex
+      EntryIndex.ImmutableEntryIndex,
+      *,
+      *
     ], Int, Int]
 
 object GraphSuiteSupport {

@@ -26,9 +26,13 @@ import scala.annotation.tailrec
 import scala.reflect.ClassTag
 
 class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
-    extends Graph[DirectedGraph[*, *, M, GG]] {
+    extends Graph[DirectedGraph[M, GG, *, *]] {
+  type G[V, E] = DirectedGraph[M, GG, V, E]
 
-  override def in[V, E](g: DirectedGraph[V, E, M, GG])(vs: Rs[V]): Rs[V] =
+  override def inE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] = ???
+  override def outE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] = ???
+
+  override def in[V, E](g: G[V, E])(vs: Rs[V]): Rs[V] =
     vs match {
       case Rs.IdResultSet(vs, _, _) =>
         vs.map { intoVId(g) }.reduce(_ ++ _)
@@ -38,7 +42,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
           .map { intoVId(g) }
           .reduce(_ ++ _)
     }
-  override def out[V, E](g: DirectedGraph[V, E, M, GG])(vs: Rs[V]): Rs[V] =
+  override def out[V, E](g: G[V, E])(vs: Rs[V]): Rs[V] =
     vs match {
       case Rs.IdResultSet(vs, _, _) =>
         vs.map { outVId(g) }.reduce(_ ++ _)
@@ -49,7 +53,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
           .reduce(_ ++ _)
     }
 
-  private def intoVId[V, E](g: DirectedGraph[V, E, M, GG])(vId: Int): Rs[V] = {
+  private def intoVId[V, E](g: G[V, E])(vId: Int): Rs[V] = {
     g.index.entry(vId) match {
       case Entry(_, _, _, into) =>
         adjStoreToRs(g)(into)
@@ -57,7 +61,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     }
   }
 
-  private def outVId[V, E](g: DirectedGraph[V, E, M, GG])(vId: Int): Rs[V] = {
+  private def outVId[V, E](g: G[V, E])(vId: Int): Rs[V] = {
     g.index.entry(vId) match {
       case Entry(_, _, out, _) =>
         adjStoreToRs(g)(out)
@@ -66,7 +70,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   }
 
   private def adjStoreToRs[V, E](
-    g: DirectedGraph[V, E, M, GG]
+    g: G[V, E]
   )(as: AdjacencyStore[E]): Rs[V] = {
     Rs.IdResultSet(
       as.vs,
@@ -79,30 +83,30 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     )
   }
 
-  override def isEmpty[V, E](g: DirectedGraph[V, E, M, GG]): Boolean =
+  override def isEmpty[V, E](g: G[V, E]): Boolean =
     g.table.isEmpty
 
-  override def vertices[V, E](g: DirectedGraph[V, E, M, GG]): Rs[V] =
+  override def vertices[V, E](g: G[V, E]): Rs[V] =
     Rs.fromIter(g.index.vertices)
 
   override def addVertex[V, E](
-    g: DirectedGraph[V, E, M, GG]
-  )(v: V): DirectedGraph[V, E, M, GG] = {
+    g: G[V, E]
+  )(v: V): G[V, E] = {
     val (vId, newTable) = g.table.update(v)
     val newStore = g.index.addOrUpdateEntry(vId, v)(identity)
-    new DirectedGraph(newTable, newStore)
+    new DirectedGraph[M, GG, V, E](newTable, newStore)
   }
 
   override def addVertices[V, E](
-    g: DirectedGraph[V, E, M, GG]
-  )(vs: Rs[V]): (Rs[V], DirectedGraph[V, E, M, GG]) = {
+    g: G[V, E]
+  )(vs: Rs[V]): (Rs[V], G[V, E]) = {
 
     @tailrec
     def loop(
       iter: Iterator[V],
       b: scala.collection.mutable.Builder[V, Vector[V]],
-      g: DirectedGraph[V, E, M, GG]
-    ): DirectedGraph[V, E, M, GG] = {
+      g: G[V, E]
+    ): G[V, E] = {
       if (iter.hasNext) {
         val v = iter.next()
         val g1 = addVertex(g)(v)
@@ -116,8 +120,8 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   }
 
   override def addEdge[V, E](
-    g: DirectedGraph[V, E, M, GG]
-  )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = {
+    g: G[V, E]
+  )(src: V, dst: V, e: E): G[V, E] = {
 
     val index = for {
       srcId <- g.table.lookup(src)
@@ -140,8 +144,8 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   }
 
   override def removeVertex[V, E](
-    g: DirectedGraph[V, E, M, GG]
-  )(v: V): DirectedGraph[V, E, M, GG] = {
+    g: G[V, E]
+  )(v: V): G[V, E] = {
     g.table.remove(v) match {
       case (None, _) => g
       case (Some(id), table) =>
@@ -151,10 +155,10 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   }
 
   override def removeEdge[V, E](
-    g: DirectedGraph[V, E, M, GG]
-  )(src: V, dst: V, e: E): DirectedGraph[V, E, M, GG] = ???
+    g: G[V, E]
+  )(src: V, dst: V, e: E): G[V, E] = ???
 
-  override def get[V, E](g: DirectedGraph[V, E, M, GG])(v: V): Option[V] =
+  override def get[V, E](g: G[V, E])(v: V): Option[V] =
     g.table
       .lookup(v)
       .map(g.index.entry)
@@ -163,6 +167,6 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
         case _                 => None
       }
 
-  override def empty[V, E: ClassTag]: DirectedGraph[V, E, M, GG] =
-    new DirectedGraph[V, E, M, GG](LookupTable[M].empty, EntryIndex[GG].empty)
+  override def empty[V, E: ClassTag]: G[V, E] =
+    new DirectedGraph[M, GG, V, E](LookupTable[M].empty, EntryIndex[GG].empty)
 }
