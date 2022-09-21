@@ -52,6 +52,8 @@ trait AdjacencyStore[E] {
   def foldLeft[B](b: B)(f: (B, Int) => B): B
 
   def remove(v: Int): AdjacencyStore[E]
+
+  def iterator: Iterable[(E, Int)] = props.view.zip(vs)
 }
 
 case class VecStore[E](

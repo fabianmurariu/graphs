@@ -29,31 +29,31 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     extends Graph[DirectedGraph[M, GG, *, *]] {
   type G[V, E] = DirectedGraph[M, GG, V, E]
 
-  override def inE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] = ???
-  override def outE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] = ???
+  override def inE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] =
+    expand(g, vs)(intoVEId)
+  override def outE[V, E](g: G[V, E])(vs: Rs[V]): Rs[(E, V)] =
+    expand(g, vs)(outVEId)
 
   override def in[V, E](g: G[V, E])(vs: Rs[V]): Rs[V] =
-    vs match {
-      case Rs.IdResultSet(vs, _, _) =>
-        vs.map { intoVId(g) }.reduce(_ ++ _)
-      case e @ EmptyResultSet() => e
-      case IterableResultSet(vs) =>
-        vs.flatMap(g.table.lookup(_))
-          .map { intoVId(g) }
-          .reduce(_ ++ _)
-    }
+    expand(g, vs)(intoVId)
+
   override def out[V, E](g: G[V, E])(vs: Rs[V]): Rs[V] =
+    expand(g, vs)(outVId)
+
+  def expand[V, E, O](g: G[V, E], vs: Rs[V])(
+    entryFn: (G[V, E], Int) => Rs[O]
+  ): Rs[O] =
     vs match {
       case Rs.IdResultSet(vs, _, _) =>
-        vs.map { outVId(g) }.reduce(_ ++ _)
-      case e @ EmptyResultSet() => e
+        vs.map { entryFn(g, _) }.reduce(_ ++ _)
+      case e @ EmptyResultSet() => e.asInstanceOf[Rs[O]]
       case IterableResultSet(vs) =>
         vs.flatMap(g.table.lookup(_))
-          .map { outVId(g) }
+          .map { entryFn(g, _) }
           .reduce(_ ++ _)
     }
 
-  private def intoVId[V, E](g: G[V, E])(vId: Int): Rs[V] = {
+  private def intoVId[V, E](g: G[V, E], vId: Int): Rs[V] = {
     g.index.entry(vId) match {
       case Entry(_, _, _, into) =>
         adjStoreToRs(g)(into)
@@ -61,7 +61,15 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     }
   }
 
-  private def outVId[V, E](g: G[V, E])(vId: Int): Rs[V] = {
+  private def intoVEId[V, E](g: G[V, E], vId: Int): Rs[(E, V)] = {
+    g.index.entry(vId) match {
+      case Entry(_, _, _, into) =>
+        adjStoreToRsE(g)(into)
+      case _ => Rs.empty[(E, V)]
+    }
+  }
+
+  private def outVId[V, E](g: G[V, E], vId: Int): Rs[V] = {
     g.index.entry(vId) match {
       case Entry(_, _, out, _) =>
         adjStoreToRs(g)(out)
@@ -69,15 +77,37 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     }
   }
 
-  private def adjStoreToRs[V, E](
-    g: G[V, E]
-  )(as: AdjacencyStore[E]): Rs[V] = {
+  private def outVEId[V, E](g: G[V, E], vId: Int): Rs[(E, V)] = {
+    g.index.entry(vId) match {
+      case Entry(_, _, out, _) =>
+        adjStoreToRsE(g)(out)
+      case _ => Rs.empty[(E, V)]
+    }
+  }
+
+  @inline
+  private def adjStoreToRs[V, E](g: G[V, E])(as: AdjacencyStore[E]): Rs[V] =
+    adjStoreToRsInner(g, as)(_.v)
+
+  @inline
+  private def adjStoreToRsE[V, E](g: G[V, E])(
+    as: AdjacencyStore[E]
+  ): Rs[(E, V)] = {
+    val vs = adjStoreToRs(g)(as)
+    Rs.fromIter(as.props.zip(vs))
+  }
+
+
+  @inline
+  private def adjStoreToRsInner[V, E, O](g: G[V, E], as: AdjacencyStore[E])(
+    f: Entry[V, E] => O
+  ): Rs[O] = {
     Rs.IdResultSet(
       as.vs,
       as.props,
       { i: Int =>
         g.index.entry(i) match {
-          case Entry(_, v, _, _) => v
+          case e: Entry[V, E] @unchecked => f(e)
         }
       }
     )
@@ -89,17 +119,13 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
   override def vertices[V, E](g: G[V, E]): Rs[V] =
     Rs.fromIter(g.index.vertices)
 
-  override def addVertex[V, E](
-    g: G[V, E]
-  )(v: V): G[V, E] = {
+  override def addVertex[V, E](g: G[V, E])(v: V): G[V, E] = {
     val (vId, newTable) = g.table.update(v)
     val newStore = g.index.addOrUpdateEntry(vId, v)(identity)
     new DirectedGraph[M, GG, V, E](newTable, newStore)
   }
 
-  override def addVertices[V, E](
-    g: G[V, E]
-  )(vs: Rs[V]): (Rs[V], G[V, E]) = {
+  override def addVertices[V, E](g: G[V, E])(vs: Rs[V]): (Rs[V], G[V, E]) = {
 
     @tailrec
     def loop(
@@ -119,9 +145,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     Rs.fromIter(b.result()) -> g1
   }
 
-  override def addEdge[V, E](
-    g: G[V, E]
-  )(src: V, dst: V, e: E): G[V, E] = {
+  override def addEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E] = {
 
     val index = for {
       srcId <- g.table.lookup(src)
@@ -143,9 +167,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     new DirectedGraph(g.table, index.getOrElse(g.index))
   }
 
-  override def removeVertex[V, E](
-    g: G[V, E]
-  )(v: V): G[V, E] = {
+  override def removeVertex[V, E](g: G[V, E])(v: V): G[V, E] = {
     g.table.remove(v) match {
       case (None, _) => g
       case (Some(id), table) =>
@@ -154,9 +176,7 @@ class GraphInstance[M[_]: LookupTable, GG[_, _]: EntryIndex]
     }
   }
 
-  override def removeEdge[V, E](
-    g: G[V, E]
-  )(src: V, dst: V, e: E): G[V, E] = ???
+  override def removeEdge[V, E](g: G[V, E])(src: V, dst: V, e: E): G[V, E] = ???
 
   override def get[V, E](g: G[V, E])(v: V): Option[V] =
     g.table

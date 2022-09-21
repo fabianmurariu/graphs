@@ -23,7 +23,7 @@ import scala.annotation.tailrec
 /** Result Set
   */
 sealed trait Rs[O] extends Iterable[O] with Serializable {
-  override def to[C1](factory: Factory[O, C1]): C1
+  def to[C1](factory: Factory[O, C1]): C1
   // def toList = to(List)
   // def toVector = to(Vector)
   // def toSet = to(Set)

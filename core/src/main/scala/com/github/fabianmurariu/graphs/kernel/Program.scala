@@ -1,22 +1,33 @@
 package com.github.fabianmurariu.graphs.kernel
 
-import com.github.fabianmurariu.graphs.syntax._
 import cats.kernel.Monoid
+import com.github.fabianmurariu.graphs.syntax.*
+
+import scala.collection.mutable
 
 trait Program[S, V, E] extends Monoid[S] {
 
   def init[G[_, _]: Graph](g: G[V, E])(seed: Seed[V, S]): Rs[V]
 
-  def gather[G[_, _]: Graph](g: G[V, E])(u: (V, S), e: (E, S), v: (V, S)): S
+  def gather[G[_, _]: Graph](
+    g: G[V, E]
+  )(u: State[V, S], e: State[E, S], v: State[V, S]): S
 
-  def apply(v: (V, S), s: S): (V, S)
+  def apply(v: State[V, S], s: S): State[V, S]
 
-  def scatter(u: (V, S), e: (E, S), v: (V, S)): Scatter[V, S]
+  def scatter(u: State[V, S], e: State[E, S], v: State[V, S]): Scatter[V, S]
 
   def neighbours[G[_, _]: Graph](g: G[V, E])(v: V): Rs[(E, V)]
 
 }
 
+case class State[A, S](value: A, state: S, changed: Boolean) {
+  def update(newState: S): State[A, S] = {
+    this.copy(state = newState, changed = newState != state)
+  }
+
+  def get: S = state
+}
 sealed trait Scatter[+V, +S]
 
 object Scatter {
@@ -37,42 +48,43 @@ class SSSP[V, E](implicit N: Numeric[E]) extends Program[Long, V, E] {
 
   override def combine(x: Long, y: Long): Long = Math.min(x, y)
 
-  override def empty: Long = Long.MaxValue
+  override def empty: Long = Math.pow(2, 60).toLong
 
-  override def init[G[_, _]: Graph](g: G[V, E])(vs: Seed[V, Long]): Rs[V] =
+  override def init[G[_, _]: Graph](g: G[V, E])(vs: Seed[V, Long]): Rs[V] = {
+    println(vs)
     vs match {
       case Seed.Vertex(v, _) => g.out(Rs(v))
+      case Seed.Initial(vs)  => g.out(Rs.fromIter(vs.map(_._1)))
     }
+  }
 
   override def gather[G[_, _]: Graph](
     g: G[V, E]
-  )(u: (V, Long), e: (E, Long), v: (V, Long)): Long = {
-    val (_, dv) = v
-    val (_, duv) = e
-    dv + duv
+  )(u: State[V, Long], e: State[E, Long], v: State[V, Long]): Long = {
+    u.get + e.get
   }
 
-  override def apply(v: (V, Long), s: Long): (V, Long) = {
-    val (vnext, _) = v
-    (vnext, s)
+  override def apply(v: State[V, Long], s: Long): State[V, Long] = {
+    v.update(s)
   }
 
   override def scatter(
-    u: (V, Long),
-    edge: (E, Long),
-    v: (V, Long)
+    u: State[V, Long],
+    edge: State[E, Long],
+    v: State[V, Long]
   ): Scatter[V, Long] = {
     val (_, du) = u
     val (vertex, dv) = v
-    val (e, _) = edge
-    if (du + N.toLong(e) < dv)
-      Scatter.Activate(vertex, du + N.toLong(e), N.toLong(e))
+    val (e, duv) = edge
+    val newVal = du + N.toLong(e)
+    if (newVal < dv)
+      Scatter.Activate(vertex, newVal, N.toLong(e))
     else
       Scatter.Empty
   }
 
   override def neighbours[G[_, _]: Graph](g: G[V, E])(v: V): Rs[(E, V)] =
-    g.outE(Rs(v))
+    g.outE(Rs(v)) ++ g.inE(Rs(v))
 
 }
 
@@ -80,7 +92,8 @@ object Program {
 
   case class ProgramCtx[S, V, E](
     vs: Map[V, S] = Map.empty[V, S],
-    es: Map[(V, V, E), S] = Map.empty[(V, V, E), S]
+    es: Map[(V, V, E), S] = Map.empty[(V, V, E), S],
+    active: Set[V]
   ) {
 
     def get(v: V): Option[S] = vs.get(v)
@@ -94,6 +107,13 @@ object Program {
     def updateVStateWith(v: V)(f: Option[S] => Option[S]): ProgramCtx[S, V, E] =
       this.copy(vs = vs.updatedWith(v)(f))
 
+    def activate(v: V): ProgramCtx[S, V, E] = {
+      this.copy(active = active + v)
+    }
+
+    def deactivate(v: V): ProgramCtx[S, V, E] = {
+      this.copy(active = active - v)
+    }
     def updateEStateWith(v: V, u: V, e: E)(
       f: Option[S] => Option[S]
     ): ProgramCtx[S, V, E] =
@@ -102,30 +122,34 @@ object Program {
 
   object ProgramCtx {
     def apply[S, V, E](seed: Seed[V, S]): ProgramCtx[S, V, E] = seed match {
-      case Seed.Initial(vs)  => ProgramCtx(vs = Map(vs: _*))
-      case Seed.Vertex(v, s) => ProgramCtx(vs = Map(v -> s))
+      case Seed.Initial(vs) =>
+        ProgramCtx(vs = Map(vs*), active = Set(vs.map(_._1)*))
+      case Seed.Vertex(v, s) => ProgramCtx(vs = Map(v -> s), active = Set(v))
     }
   }
 
-  def runGather[S, V, E, G[_, _]:Graph](
+  def runGather[S, V, E, G[_, _]: Graph](
     p: Program[S, V, E],
     u: V
   )(ctx: ProgramCtx[S, V, E], g: G[V, E]): Option[S] = {
+    // if cached accumulator for vertex u is empty then call gather
     ctx.get(u).orElse {
       p
         .neighbours(g)(u)
-        .map { case (e: E, v) =>
+        .map { case (e, v) =>
           p.gather(g)(
-            v -> ctx.getOrElseV(u, p.empty),
+            u -> ctx.getOrElseV(u, p.empty),
             e -> ctx.getOrElseE(u, v, e, p.empty),
-            u -> ctx.getOrElseV(v, p.empty)
+            v -> ctx.getOrElseV(v, p.empty)
           )
         }
         .reduceOption(p.combine)
     }
   }
 
-  def runApply[S, V, E](uState: Option[S], u: V)(ctx: ProgramCtx[S, V, E]) = {
+  def runApply[S, V, E](p: Program[S, V, E], uState: Option[S], u: V)(
+    ctx: ProgramCtx[S, V, E]
+  ): ProgramCtx[S, V, E] = {
     uState.fold(ctx) { newAcc =>
       ctx.updateVStateWith(u) {
         case None       => Some(newAcc)
@@ -134,38 +158,53 @@ object Program {
     }
   }
 
-  def run[S, V, E, G[_, _]](
-    p: Program[S, V, E]
-  )(g: G[V, E], seed: Seed[V, S])(implicit G: Graph[G]) = {
-
-    val ctx = ProgramCtx[S, V, E](seed)
-
-    p.init(g)(seed).foldLeft(ctx) { (ctx, u: V) =>
-      // gather sum phase
-      // if cached accumulator au for vertex u is empty then call gather
-      val acc = runGather(p, u)(ctx, g)
-
-      // apply phase
-      val newCtx = runApply(acc, u)(ctx)
-
-      // scatter phase
-      p.neighbours(g)(u).toVector.foldLeft(newCtx) { case (ctx, (e, v)) =>
-        p.scatter(
-          v -> ctx.getOrElseV(u, p.empty),
-          e -> ctx.getOrElseE(u, v, e, p.empty),
-          u -> ctx.getOrElseV(v, p.empty)
-        ) match {
-          case Scatter.Activate(v, es, vs) =>
-            ctx.updateVStateWith(v) {
+  def scatter[S, V, E, G[_, _]: Graph](p: Program[S, V, E], g: G[V, E], u: V)(
+    initCtx: ProgramCtx[S, V, E]
+  ): ProgramCtx[S, V, E] = {
+    val expand = p.neighbours(g)(u)
+    expand.foldLeft(initCtx) { case (ctx, (e, v)) =>
+      p.scatter(
+        u -> ctx.getOrElseV(u, p.empty),
+        e -> ctx.getOrElseE(u, v, e, p.empty),
+        v -> ctx.getOrElseV(v, p.empty)
+      ) match {
+        case Scatter.Activate(v, es, vs) =>
+          val nextCtx = ctx
+            .updateVStateWith(v) {
               case Some(accV) => Some(p.combine(vs, accV))
-              case None       => None
+              case None       => Some(vs)
             }
-          case Scatter.Empty =>
-            ctx.updateVStateWith(v) { _ => None }
-        }
-        ctx
+            .updateEStateWith(v, u, e) {
+              case Some(accE) => Some(p.combine(es, accE))
+              case None       => Some(es)
+            }
+            .activate(v)
+          nextCtx
+        case Scatter.Empty =>
+          ctx.deactivate(v) // .updateVStateWith(v) { _ => None }
       }
     }
+  }
+
+  def run[S, V, E, G[_, _]](
+    p: Program[S, V, E]
+  )(g: G[V, E], seed: Seed[V, S])(implicit G: Graph[G]): ProgramCtx[S, V, E] = {
+
+    var ctx = ProgramCtx[S, V, E](seed)
+
+    while (ctx.active.nonEmpty) {
+      ctx = ctx.active.foldLeft(ctx) { (ctx, u: V) =>
+        // gather sum phase
+        val acc = runGather(p, u)(ctx, g)
+
+        // apply phase
+        val newCtx = runApply(p, acc, u)(ctx)
+
+        // scatter phase
+        scatter(p, g, u)(newCtx).deactivate(u)
+      }
+    }
+    ctx
 
   }
 }

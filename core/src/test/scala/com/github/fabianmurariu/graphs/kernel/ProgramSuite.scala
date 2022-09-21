@@ -7,9 +7,9 @@ class ProgramSuite extends munit.FunSuite {
 
   test("step into SSSP on a diamond graph") {
 
-    val p: SSSP[String,Int] = new SSSP[String, Int]()
+    val p: SSSP[String,Long] = new SSSP[String, Long]()
 
-    val g = DirectedGraph.default[String, Int]
+    val g = DirectedGraph.default[String, Long]
 
     // two paths
     // a -5-> b1 -7-> c
@@ -19,13 +19,14 @@ class ProgramSuite extends munit.FunSuite {
       .addVertex("b1")
       .addVertex("b2")
       .addVertex("c")
-      .addEdge("a", "b1", 5)
-      .addEdge("a", "b2", 2)
-      .addEdge("b1", "c", 7)
-      .addEdge("b2", "c", 3)
+      .addEdge("a", "b1", 5L)
+      .addEdge("a", "b2", 2L)
+      .addEdge("b1", "c", 7L)
+      .addEdge("b2", "c", 3L)
 
 
-    Program.run(p)(graph, Seed.Vertex("a", 0L))
+    val ctx = Program.run(p)(graph, Seed.Vertex("a", 0L))
+    println(ctx)
 
   }
 
