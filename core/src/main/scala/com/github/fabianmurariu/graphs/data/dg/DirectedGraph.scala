@@ -16,6 +16,8 @@
 
 package com.github.fabianmurariu.graphs.data.dg
 
+import com.github.fabianmurariu.graphs.data.dg.EntryIndex.ImmutableEntryIndex
+import com.github.fabianmurariu.graphs.data.dg.LookupTable.ImmutableLookupTable
 import com.github.fabianmurariu.graphs.kernel.Graph
 
 /** This Graph is unsafe because it leaks internal ids it can be mutable and
@@ -24,11 +26,12 @@ import com.github.fabianmurariu.graphs.kernel.Graph
   * @param vTable
   * @param store
   */
-case class DirectedGraph[M[_], G[V, E], V, E](table: M[V], index: G[V, E])
+case class DirectedGraph[M[_], G[_, _], V, E](table: M[V], index: G[V, E])
 
 object DirectedGraph {
 
-  def default[V, E] = empty[
+  def default[V, E]
+    : DirectedGraph[ImmutableLookupTable, ImmutableEntryIndex, V, E] = empty[
     LookupTable.ImmutableLookupTable,
     EntryIndex.ImmutableEntryIndex,
     V,

@@ -88,6 +88,9 @@ lazy val benchmarks = crossProject(JVMPlatform)
   .settings(simulacrumSettings, macroSettings)
   .enablePlugins(JmhPlugin)
   .dependsOn(core, jgrapht)
-  .settings(name := "graphs-benchmarks")
+  .settings(
+    name := "graphs-benchmarks",
+    libraryDependencies ++= Seq("org.scalameta" %%% "munit" % "0.7.29" % Test)
+  )
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)
