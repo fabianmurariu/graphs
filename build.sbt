@@ -59,6 +59,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(
     name := "graphs-core",
     libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-core" % "3.3.0",
       "org.typelevel" %%% "cats-core" % "2.7.0",
       "org.typelevel" %%% "cats-free" % "2.7.0",
       "org.typelevel" %%% "cats-effect" % "3.3.11",
