@@ -9,14 +9,15 @@ import scala.reflect.ClassTag
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF.Id
 
+class DirectGraphSuiteV2 extends GraphSuiteV2[Long, String] {
+  override def empty = DirectedGraphF.immutableSimpleGraph[Long, String]
+}
+
 abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
-  empty: DirectedGraphF.DGraph[V, E]
 ) extends ScalaCheckSuite {
+  def empty: DirectedGraphF.DGraph[V, E]
 
-
-  val v = implicitly[Monad[DirectedGraphF.Id]]
-
-  property("we can get a node back when the graph is not empty") {
+  property("we can get a node back when the graph is not empty".only) {
     forAll { (vs: Set[V]) =>
       (vs.nonEmpty) ==> {
 
@@ -33,7 +34,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
     }
   }
 
-  property("graph can add all the vertices then get them back") {
+  property("graph can add all the vertices then get them back".only) {
     forAll { (vs: Set[V]) =>
       val g = vs.foldLeft(empty) { (g, v) =>
         g.addVertex(v)
@@ -45,7 +46,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
     }
   }
 
-  property("(1)-['a']->(2) is a valid representable graph") {
+  property("(1)-['a']->(2) is a valid representable graph".only) {
     forAll { (src: V, e: E, dst: V) =>
       (src != dst) ==> {
         val g = empty.addVertex(src).addVertex(dst).addEdge(src, dst, e)
@@ -56,7 +57,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "graph can represent a star graph where one node points to all the others"
+    "graph can represent a star graph where one node points to all the others".only
   ) {
     forAll { (v: V, vs: Set[V], e: E) =>
       (!vs(v)) ==> {

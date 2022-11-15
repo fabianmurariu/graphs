@@ -2,12 +2,15 @@ package com.github.fabianmurariu.graphs.kernel.v2
 
 import cats.Monad
 import cats.syntax.all.*
+import com.github.fabianmurariu.graphs.data.dg.v2.GraphStorage.ImmutableGraphStorage
+import com.github.fabianmurariu.graphs.data.dg.v2.LookupTable.ImmutableLookupTable
 import com.github.fabianmurariu.graphs.kernel.ResultSet
 import com.github.fabianmurariu.graphs.data.dg.v2.{
   AdjacencyList,
   DirectedGraph,
   GraphStorage,
-  LookupTable
+  LookupTable,
+  VecStore
 }
 
 /** An effectful graph with [[V]] as vertex label with [[E]] as edge label and
@@ -21,7 +24,7 @@ trait DirectedGraphF[F[_], +V, +E, VID] {
 
   def removeVertex[VV >: V, EE >: E](id: VID): F[DirectedGraphF[F, VV, EE, VID]]
 
-  def addVertex[VV >: V, EE >: E](id: VID): F[DirectedGraphF[F, VV, EE, VID]]
+  def addVertex[B >: V <: VID, EE >: E](id: B): F[DirectedGraphF[F, B, EE, VID]]
 
   def addVertex[VV >: V, EE >: E](
     id: VID,
@@ -33,13 +36,6 @@ trait DirectedGraphF[F[_], +V, +E, VID] {
     dstId: VID,
     e: EE
   ): F[DirectedGraphF[F, VV, EE, VID]]
-
-  /** get the vertex by VID, will return null if not found
-    *
-    * @param id
-    * @return
-    */
-  def unsafeGetVertex[VV >: V](id: VID): F[VV]
 
   def neighbours(v: ResultSet[F, VID]): ResultSet[F, VID]
   def out(v: ResultSet[F, VID]): ResultSet[F, VID]
@@ -53,8 +49,7 @@ trait DirectedGraphF[F[_], +V, +E, VID] {
 
   def isEmpty = vertices.size.map(_ == 0L)
 
-  def get[VV >: V](id: VID): F[Option[VV]] =
-    unsafeGetVertex(id).map(Option(_))
+  def get[VV >: V](id: VID): F[Option[VV]]
 }
 
 object DirectedGraphF {
@@ -76,5 +71,13 @@ object DirectedGraphF {
     adjListBuilder: => AdjacencyList[E]
   ): DirectedGraph[F, V, E, VID] = {
     new DirectedGraph[F, V, E, VID](table, store, adjListBuilder)
+  }
+
+  def immutableSimpleGraph[V, E]: DirectedGraph[Id, V, E, V] = {
+    new DirectedGraph[Id, V, E, V](
+      ImmutableLookupTable[Id, V](),
+      ImmutableGraphStorage[Id, V, E, V](),
+      VecStore[E]()
+    )
   }
 }
