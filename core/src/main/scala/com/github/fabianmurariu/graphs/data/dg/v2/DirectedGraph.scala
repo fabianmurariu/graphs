@@ -1,13 +1,13 @@
 package com.github.fabianmurariu.graphs.data.dg.v2
-import com.github.fabianmurariu.graphs.kernel.v2.{DirectedGraphF => DGF}
 import cats.Monad
 import cats.syntax.all.*
 import com.github.fabianmurariu.graphs.kernel.ResultSet
 import com.github.fabianmurariu.graphs.kernel.ResultSet.Ids
+import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF as DGF
 
 class DirectedGraph[F[_], +V, +E, VID](
   table: LookupTable[F, VID],
-  adjStore: GraphStorage[F, V, E],
+  adjStore: GraphStorage[F, V, E, VID],
   edgeList: => AdjacencyList[E]
 )(implicit val F: Monad[F])
     extends DGF[F, V, E, VID] {
@@ -23,19 +23,19 @@ class DirectedGraph[F[_], +V, +E, VID](
     for {
       src <- table.find(srcId)
       dst <- table.find(srcId)
-      adj1 <- adjStore.addOrUpdateEntry(src, srcId) {
+      adj1 <- adjStore.updateEntry(src) {
         case Empty => throw new IllegalStateException
         case ent @ Entry(_, _, out, _) =>
           ent.copy(out = out.appendPair(dst, edge))
       }
-      adj2 <- adj1.addOrUpdateEntry(dst, dstId) {
+      adj2 <- adj1.updateEntry(dst) {
         case Empty => throw new IllegalStateException
         case ent @ Entry(_, _, _, in) =>
           ent.copy(into = in.appendPair(dst, edge))
       }
     } yield new DirectedGraph(
       table,
-      adj2.asInstanceOf[GraphStorage[F, V, E]],
+      adj2.asInstanceOf[GraphStorage[F, V, E, VID]],
       edgeList
     )
   }
@@ -48,11 +48,13 @@ class DirectedGraph[F[_], +V, +E, VID](
     label: VV
   ): F[DGF[F, VV, EE, VID]] = {
     for {
-      (physicalId, tbl) <- table.lookupOrCreate(id)
-      adj <- adjStore.addOrUpdateEntry(physicalId, label) {
-        case Empty => Entry(physicalId, label, edgeList, edgeList)
-        case ve    => ve
-      }
+      (physicalId, adj) <- adjStore.allocateId
+      tbl <- table.lookupOrCreate(id, physicalId)
+      adj <- adj.addEntry(
+        physicalId,
+        id,
+        Entry(physicalId, label, edgeList, edgeList)
+      )
     } yield new DirectedGraph(tbl, adj, edgeList)
   }
 
@@ -68,7 +70,7 @@ class DirectedGraph[F[_], +V, +E, VID](
 
     }
 
-    val f: F[Iterable[Int]] = for {
+    val ids: F[Iterable[Int]] = for {
       pIds <- physicalIds
       adjs <- adjStore
         .entries(pIds)
@@ -80,7 +82,7 @@ class DirectedGraph[F[_], +V, +E, VID](
         )
     } yield adjs
 
-    ResultSet.Ids(f, table.toLogicalIds)
+    ResultSet.Ids(ids, adjStore.lookupVIDs)
 
   }
   def in(v: ResultSet[F, VID]): ResultSet[F, VID] = ???

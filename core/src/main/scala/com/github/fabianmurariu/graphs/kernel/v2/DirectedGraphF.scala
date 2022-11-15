@@ -1,9 +1,14 @@
 package com.github.fabianmurariu.graphs.kernel.v2
 
 import cats.Monad
-
 import cats.syntax.all.*
 import com.github.fabianmurariu.graphs.kernel.ResultSet
+import com.github.fabianmurariu.graphs.data.dg.v2.{
+  AdjacencyList,
+  DirectedGraph,
+  GraphStorage,
+  LookupTable
+}
 
 /** An effectful graph with [[V]] as vertex label with [[E]] as edge label and
   * [[VID]] as identifier
@@ -11,7 +16,6 @@ import com.github.fabianmurariu.graphs.kernel.ResultSet
 trait DirectedGraphF[F[_], +V, +E, VID] {
 
   implicit def F: Monad[F]
-
 
   def vertices: ResultSet[F, V]
 
@@ -65,4 +69,12 @@ object DirectedGraphF {
   type DGraph[V, E] = DirectedGraphF[Id, V, E, V]
 
   def mutableLabeledGraph64[V, E]: LabeledDGraph64[V, E] = ???
+
+  def apply[F[_]: Monad, V, E, VID](
+    table: LookupTable[F, VID],
+    store: GraphStorage[F, V, E, VID],
+    adjListBuilder: => AdjacencyList[E]
+  ): DirectedGraph[F, V, E, VID] = {
+    new DirectedGraph[F, V, E, VID](table, store, adjListBuilder)
+  }
 }
