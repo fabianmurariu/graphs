@@ -57,6 +57,7 @@ trait AdjacencyStore[E] {
   def remove(v: Int): AdjacencyStore[E]
 
   def iterator: Iterable[(E, Int)] = props.view.zip(vs)
+  def vertexIds: Iterable[Int] = vs.view
 }
 
 case class VecStore[E](

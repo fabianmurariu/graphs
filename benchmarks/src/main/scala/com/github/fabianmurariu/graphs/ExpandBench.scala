@@ -1,27 +1,23 @@
 package com.github.fabianmurariu.graphs
 
-import com.github.fabianmurariu.graphs.data.dg.DirectedGraph
-import com.github.fabianmurariu.graphs.data.dg.EntryIndex.ImmutableEntryIndex
-import com.github.fabianmurariu.graphs.data.dg.LookupTable.ImmutableLookupTable
 import com.github.fabianmurariu.graphs.ldbc.schema.{LdbcEdge, LdbcNode, Person}
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
-import com.github.fabianmurariu.graphs.syntax.*
 
 import java.time.{LocalDate, LocalDateTime}
+import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
+import com.github.fabianmurariu.graphs.ldbc.NodesLoader
+import java.nio.file.Paths
 
 @State(Scope.Thread)
 class ExpandBench {
 
-  var graph: DirectedGraph[
-    ImmutableLookupTable,
-    ImmutableEntryIndex,
-    LdbcNode,
-    LdbcEdge
-  ] = _
+  val dynamic = Paths.get("/sf1/composite-merged-fk/initial_snapshot/dynamic")
+
+  var graph: DirectedGraphF.LabeledDGraph64[LdbcNode, LdbcEdge] = _
 
   /*
    * Since @State objects are kept around during the lifetime of the benchmark,
@@ -47,7 +43,13 @@ class ExpandBench {
 
   @Setup
   def prepare: Unit = {
-    graph = DirectedGraph.default[LdbcNode, LdbcEdge]
+    graph = NodesLoader[LdbcNode].loadNodes[LdbcEdge](graph)(
+      dynamic.resolve("Person")
+    ) match {
+      case Right(g) => g
+      case Left(t)  => throw t
+    }
+
   }
 
   /*
@@ -67,7 +69,8 @@ class ExpandBench {
 
   @Benchmark
   def measureRight: Unit = {
-    graph = graph.addVertex(Person(LocalDateTime.now(), 1, "Blerg", "Blarg"))
+    graph =
+      graph.addVertex(1L, Person(LocalDateTime.now(), 1, "Blerg", "Blarg"))
   }
 
 }

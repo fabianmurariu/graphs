@@ -11,15 +11,28 @@ sealed trait LdbcEntity
 sealed trait LdbcNode extends LdbcEntity
 sealed trait LdbcEdge extends LdbcEntity
 
+object LdbcNode {
+
+  implicit def nodeDecoder: NodeDecoder[LdbcNode] = new NodeDecoder[LdbcNode] {
+
+    override def decodeLine(line: String): Either[Throwable,LdbcNode] = ???
+
+    override def id(v: LdbcNode): Long = ???
+
+  }
+}
+
 case class Person(
   created: LocalDateTime,
   id: Long,
   firstName: String,
   lastName: String
-) extends LdbcNode
+) extends LdbcNode 
 
 object Person {
   implicit val decoder: NodeDecoder[Person] = new NodeDecoder[Person] {
+
+    def id(p: Person): Long = p.id
     override def decodeLine(line: String): Either[Throwable, Person] = {
       try {
         val tokens = line.split("\\|")
@@ -46,6 +59,10 @@ case class PersonToPerson(
 object PersonToPerson {
   implicit val decoder: EdgeDecoder[PersonToPerson] =
     new EdgeDecoder[PersonToPerson] {
+
+      def dst(e: PersonToPerson): Long = e.personId2
+      def src(e: PersonToPerson): Long = e.personId1
+
       override def decodeLine(
         line: String
       ): Either[Throwable, PersonToPerson] = {
