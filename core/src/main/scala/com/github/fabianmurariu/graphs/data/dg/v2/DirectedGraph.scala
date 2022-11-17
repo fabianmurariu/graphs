@@ -16,7 +16,7 @@ class DirectedGraph[F[_], +V, +E, VID](
     for {
       (id, tbl) <- table.remove(id)
       adj <- adjStore.remove(id)
-    } yield new DirectedGraph(tbl, adj)
+    } yield new DirectedGraph(tbl, adj, edgeList)
   }
   def addEdge[VV >: V, EE >: E](
     srcId: VID,
@@ -27,14 +27,14 @@ class DirectedGraph[F[_], +V, +E, VID](
       src <- table.unsafeFind(srcId)
       dst <- table.unsafeFind(dstId)
       adj1 <- adjStore.updateEntry(src) {
-        case Empty => throw new IllegalStateException
         case ent @ Entry(_, _, out, _) =>
           ent.copy(out = out.appendPair(dst, edge))
+        case _ => throw new IllegalStateException
       }
       adj2 <- adj1.updateEntry(dst) {
-        case Empty => throw new IllegalStateException
         case ent @ Entry(_, _, _, in) =>
           ent.copy(into = in.appendPair(src, edge))
+        case _ => throw new IllegalStateException
       }
     } yield new DirectedGraph(table, adj2, edgeList)
   }
@@ -47,12 +47,11 @@ class DirectedGraph[F[_], +V, +E, VID](
     label: VV
   ): F[DGF[F, VV, EE, VID]] = {
     for {
-      (physicalId, adj) <- adjStore.allocateId
-      tbl <- table.lookupOrCreate(id, physicalId)
-      adj <- adj.addEntry(
+      (physicalId, tbl) <- table.lookupOrCreate(id)
+      adj <- adjStore.addEntry(
         physicalId,
         id,
-        Entry(physicalId, label, edgeList, edgeList)
+        Entry(id, label, edgeList, edgeList)
       )
     } yield new DirectedGraph(tbl, adj, edgeList)
   }

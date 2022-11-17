@@ -1,13 +1,16 @@
 package com.github.fabianmurariu.graphs.data.dg.v2
 
-sealed trait VertexEntry[+V, +E]
+sealed trait VertexEntry[+V, +E, VID]
 
-case object Empty extends VertexEntry[Nothing, Nothing]
+object VertexEntry{
+  def empty[V, E, VID]: VertexEntry[V, E, VID] = Empty.asInstanceOf[VertexEntry[V, E, VID]]
+}
+case object Empty extends VertexEntry[Nothing, Nothing, Nothing]
 
-case class Entry[+V, +E](
-  id: Int,
+case class Entry[+V, +E, VID](
+  vid: VID,
   v: V,
   out: AdjacencyList[E],
   into: AdjacencyList[E]
-) extends VertexEntry[V, E]
+) extends VertexEntry[V, E, VID]
 

@@ -11,17 +11,15 @@ trait GraphStorage[F[_], +V, +E, VID] {
   def addEntry[VV >: V, EE >: E](
     physicalId: Int,
     vId: VID,
-    ve: VertexEntry[VV, EE]
+    ve: VertexEntry[VV, EE, VID]
   ): F[GraphStorage[F, VV, EE, VID]]
 
   def updateEntry[VV >: V, EE >: E](physicalId: Int)(
-    f: VertexEntry[VV, EE] => VertexEntry[VV, EE]
+    f: VertexEntry[VV, EE, VID] => VertexEntry[VV, EE, VID]
   ): F[GraphStorage[F, VV, EE, VID]]
   def entries[VV >: V, EE >: E](
     physicalIds: Iterable[Int]
-  ): F[Iterable[VertexEntry[VV, EE]]]
-
-  def allocateId[VV >: V, EE >: E]: F[(Int, GraphStorage[F, VV, EE, VID])]
+  ): F[Iterable[VertexEntry[VV, EE, VID]]]
 
   def lookupVIDs(vIds: Iterable[Int]): F[Iterable[VID]]
 
@@ -31,9 +29,7 @@ trait GraphStorage[F[_], +V, +E, VID] {
 
 object GraphStorage {
   case class ImmutableGraphStorage[F[_], +V, +E, VID](
-    entries: Vector[VertexEntry[V, E]] = Vector.empty,
-    log2Phys: Vector[VID] = Vector.empty,
-    emptySlots: List[Int] = List.empty
+    entries: Vector[VertexEntry[V, E, VID]] = Vector.empty
   )(implicit F: Monad[F])
       extends GraphStorage[F, V, E, VID] {
 
@@ -45,60 +41,48 @@ object GraphStorage {
     override def addEntry[VV >: V, EE >: E](
       physicalId: Int,
       vId: VID,
-      ve: VertexEntry[VV, EE]
+      ve: VertexEntry[VV, EE, VID]
     ): F[GraphStorage[F, VV, EE, VID]] = F.pure {
       if (entries.size == physicalId) {
-        this.copy(entries = entries :+ ve, log2Phys = log2Phys :+ vId)
+        this.copy(entries = entries :+ ve)
       } else {
-        this.copy(
-          entries = entries.updated(physicalId, ve),
-          log2Phys = log2Phys.updated(physicalId, vId)
-        )
+        this.copy(entries = entries.updated(physicalId, ve))
       }
     }
 
     override def updateEntry[VV >: V, EE >: E](physicalId: Int)(
-      f: VertexEntry[VV, EE] => VertexEntry[VV, EE]
+      f: VertexEntry[VV, EE, VID] => VertexEntry[VV, EE, VID]
     ): F[GraphStorage[F, VV, EE, VID]] = F.pure {
       this.copy(entries = entries.updated(physicalId, f(entries(physicalId))))
     }
 
     override def entries[VV >: V, EE >: E](
       physicalIds: Iterable[Int]
-    ): F[Iterable[VertexEntry[VV, EE]]] = F.pure {
+    ): F[Iterable[VertexEntry[VV, EE, VID]]] = F.pure {
       physicalIds.map(entries)
     }
 
-    override def allocateId[VV >: V, EE >: E]
-      : F[(Int, GraphStorage[F, VV, EE, VID])] = {
-      F.pure {
-        emptySlots match {
-          case empty :: rest =>
-            empty -> this.copy(emptySlots = rest)
-          case _ => // there are no empty slots
-            val next = log2Phys.size
-            next -> this // TODO: check if this is sound
-        }
+    override def remove[VV >: V, EE >: E](
+      physicalId: Option[Int]
+    ): F[GraphStorage[F, VV, EE, VID]] = F.pure {
+      physicalId match {
+        case None => this
+        case Some(id) =>
+          entries(id) match {
+            case Entry(entryId, v, out, into) =>
+              val newEntries = entries.updated(id, VertexEntry.empty)
+              this.copy(entries = newEntries)
+            case _ => this
+          }
       }
     }
 
-    override def lookupVIDs(vIds: Iterable[Int]): F[Iterable[VID]] =
-      F.pure {
-        vIds.map(log2Phys)
-      }
-
-    override def remove[VV >: V, EE >: E](physicalId: Option[Int]): F[GraphStorage[F, VV, EE, VID]] = F.pure{
-     physicalId match {
-       case None => this
-       case Some(id) =>
-         entries(id) match {
-           case Empty => this
-           case Entry(entryId, v, out, into) =>
-             val newEntries = entries.updated(id, Empty)
-             val emptySlots0 = id :: emptySlots
-             this.copy(emptySlots = emptySlots0, entries = newEntries)
-         }
-     }
+    override def lookupVIDs(vIds: Iterable[Int]): F[Iterable[VID]] = F.pure {
+      vIds
+        .map { id =>
+          entries(id)
+        }
+        .collect { case e: Entry[V, E, VID] => e.vid }
     }
   }
 }
