@@ -69,9 +69,29 @@ object GraphStorage {
         case None => this
         case Some(id) =>
           entries(id) match {
-            case Entry(entryId, v, out, into) =>
+            case Entry(_, _, out, into) =>
               val newEntries = entries.updated(id, VertexEntry.empty)
-              this.copy(entries = newEntries)
+
+              val es0 = out.vertexIds.foldLeft(newEntries) { (es, i) =>
+                es.updated(
+                  i,
+                  entries(i) match {
+                    case e @ Entry(vid, v, out, into) =>
+                      e.copy(into = into.remove(id))
+                  }
+                )
+              }
+
+              val es1 = into.vertexIds.foldLeft(es0) { (es, i) =>
+                es.updated(
+                  i,
+                  entries(i) match {
+                    case e @ Entry(_, _, out, _) =>
+                      e.copy(into = out.remove(id))
+                  }
+                )
+              }
+              this.copy(entries = es1)
             case _ => this
           }
       }

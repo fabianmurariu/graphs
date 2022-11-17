@@ -18,7 +18,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
 ) extends ScalaCheckSuite {
   def empty: DirectedGraphF.DGraph[V, E]
 
-  property("we can get a node back when the graph is not empty".only) {
+  property("we can get a node back when the graph is not empty") {
     forAll { (vs: Set[V]) =>
       (vs.nonEmpty) ==> {
 
@@ -35,7 +35,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
     }
   }
 
-  property("graph can add all the vertices then get them back".only) {
+  property("graph can add all the vertices then get them back") {
     forAll { (vs: Set[V]) =>
       val g = vs.foldLeft(empty) { (g, v) =>
         g.addVertex(v)
@@ -47,7 +47,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
     }
   }
 
-  property("(1)-['a']->(2) is a valid representable graph".only) {
+  property("(1)-['a']->(2) is a valid representable graph") {
     forAll { (src: V, e: E, dst: V) =>
       (src != dst) ==> {
         val g = empty.addVertex(src).addVertex(dst).addEdge(src, dst, e)
@@ -58,7 +58,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "graph can represent a star graph where one node points to all the others".only
+    "graph can represent a star graph where one node points to all the others"
   ) {
     forAll { (v: V, vs: Set[V], e: E) =>
       (!vs(v)) ==> {
@@ -80,7 +80,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "a hyperconnected graph will have every node pointing to all other nodes".only
+    "a hyperconnected graph will have every node pointing to all other nodes"
   ) {
     forAll { (vs: Set[V], e: E) =>
       (vs.nonEmpty) ==> {
@@ -104,7 +104,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "remove one vertex from a graph with one vertex results in the empty graph".only
+    "remove one vertex from a graph with one vertex results in the empty graph"
   ) {
     forAll { (v: V) =>
       val g = empty.addVertex(v).removeVertex(v)
