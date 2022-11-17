@@ -12,7 +12,12 @@ class DirectedGraph[F[_], +V, +E, VID](
 )(implicit val F: Monad[F])
     extends DGF[F, V, E, VID] {
 
-  def removeVertex[VV >: V, EE >: E](id: VID): F[DGF[F, VV, EE, VID]] = ???
+  def removeVertex[VV >: V, EE >: E](id: VID): F[DGF[F, VV, EE, VID]] = {
+    for {
+      (id, tbl) <- table.remove(id)
+      adj <- adjStore.remove(id)
+    } yield new DirectedGraph(tbl, adj)
+  }
   def addEdge[VV >: V, EE >: E](
     srcId: VID,
     dstId: VID,

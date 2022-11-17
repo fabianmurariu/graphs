@@ -17,7 +17,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / tlSitePublishBranch := Some("main")
 
 val Scala213 = "2.13.8"
-val Scala3 = "3.1.3"
+val Scala3 = "3.2.1"
 ThisBuild / crossScalaVersions := Seq(Scala213, Scala3)
 ThisBuild / scalaVersion := Scala213 // the default Scala
 
@@ -52,6 +52,11 @@ lazy val macroSettings = Seq(libraryDependencies ++= {
     Seq("org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided)
 })
 
+val munitVersion = "1.0.0-M6"
+val scalaCheckMunitEffect = "2.0.0-M2"
+val catsEffectVersion = "3.3.14"
+val catsVersion = "2.7.0"
+
 lazy val core = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
@@ -60,14 +65,13 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
     name := "graphs-core",
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % "3.3.0",
-      "org.typelevel" %%% "cats-core" % "2.7.0",
-      "org.typelevel" %%% "cats-free" % "2.7.0",
-      "org.typelevel" %%% "alleycats-laws" % "2.7.0",
-      "org.typelevel" %%% "cats-effect" % "3.3.11",
-      "org.scalameta" %%% "munit" % "0.7.29" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "0.7.29" % Test,
-      "org.typelevel" %%% "munit-cats-effect-3" % "1.0.7" % Test,
-      "org.typelevel" %%% "scalacheck-effect-munit" % "1.0.4" % Test,
+      "org.typelevel" %%% "cats-core" % catsVersion,
+      "org.typelevel" %%% "cats-free" % catsVersion,
+      "org.typelevel" %%% "alleycats-laws" % catsVersion,
+      "org.typelevel" %%% "cats-effect" % catsEffectVersion,
+      "org.scalameta" %%% "munit" % munitVersion % Test,
+      "junit" % "junit" % "4.13.1" % Test,
+      "org.typelevel" %%% "scalacheck-effect-munit" % scalaCheckMunitEffect % Test,
       "org.scodec" %%% "scodec-core" % (if (scalaVersion.value.startsWith("2."))
                                           "1.11.9"
                                         else "2.1.0")

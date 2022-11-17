@@ -4,6 +4,10 @@ import cats.Monad
 import com.github.fabianmurariu.graphs.kernel.ResultSet
 
 trait GraphStorage[F[_], +V, +E, VID] {
+  def remove[VV >: V, EE >: E](
+    physicalId: Option[Int]
+  ): F[GraphStorage[F, VV, EE, VID]]
+
   def addEntry[VV >: V, EE >: E](
     physicalId: Int,
     vId: VID,
@@ -34,7 +38,9 @@ object GraphStorage {
       extends GraphStorage[F, V, E, VID] {
 
     override def allEntries: ResultSet[F, V] =
-      ResultSet.PureRs[F, V](F.pure(entries.collect { case Entry(_, v, _, _) => v }))
+      ResultSet.PureRs[F, V](F.pure(entries.collect { case Entry(_, v, _, _) =>
+        v
+      }))
 
     override def addEntry[VV >: V, EE >: E](
       physicalId: Int,
@@ -80,5 +86,19 @@ object GraphStorage {
       F.pure {
         vIds.map(log2Phys)
       }
+
+    override def remove[VV >: V, EE >: E](physicalId: Option[Int]): F[GraphStorage[F, VV, EE, VID]] = F.pure{
+     physicalId match {
+       case None => this
+       case Some(id) =>
+         entries(id) match {
+           case Empty => this
+           case Entry(entryId, v, out, into) =>
+             val newEntries = entries.updated(id, Empty)
+             val emptySlots0 = id :: emptySlots
+             this.copy(emptySlots = emptySlots0, entries = newEntries)
+         }
+     }
+    }
   }
 }

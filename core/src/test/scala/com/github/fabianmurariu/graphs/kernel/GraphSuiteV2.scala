@@ -9,6 +9,7 @@ import scala.reflect.ClassTag
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF.Id
 
+
 class DirectGraphSuiteV2 extends GraphSuiteV2[Long, String] {
   override def empty = DirectedGraphF.immutableSimpleGraph[Long, String]
 }
@@ -79,7 +80,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "a hyperconnected graph will have every node pointing to all other nodes"
+    "a hyperconnected graph will have every node pointing to all other nodes".only
   ) {
     forAll { (vs: Set[V], e: E) =>
       (vs.nonEmpty) ==> {
@@ -103,7 +104,7 @@ abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
   }
 
   property(
-    "remove one vertex from a graph with one vertex results in the empty graph"
+    "remove one vertex from a graph with one vertex results in the empty graph".only
   ) {
     forAll { (v: V) =>
       val g = empty.addVertex(v).removeVertex(v)
