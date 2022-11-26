@@ -76,7 +76,7 @@ object GraphStorage {
                 es.updated(
                   i,
                   entries(i) match {
-                    case e @ Entry(vid, v, out, into) =>
+                    case e @ Entry(_, _, _, into) =>
                       e.copy(into = into.remove(id))
                   }
                 )

@@ -11,13 +11,7 @@ class LoaderTest extends munit.FunSuite {
 
   val loader = NodesLoader[Person]
 
-  test("what date are you") {
-    val d = "2011-06-11T14:18:48.094+00:00"
-
-    DateTimeFormatter.ISO_ZONED_DATE_TIME.parse(d)
-  }
-
-  test("can load Person") {
+  test("can load Person".ignore) {
 
     val location = "/sf1/composite-merged-fk/initial_snapshot/dynamic/Person"
     val path = Paths.get(

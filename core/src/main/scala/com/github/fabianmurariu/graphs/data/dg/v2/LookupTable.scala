@@ -22,6 +22,7 @@ object LookupTable {
     override def lookupOrCreate(a: A): F[(Int, LookupTable[F, A])] =
       F.pure {
         tbl.get(a) match {
+          case Some(i) => i -> this
           case None =>
             emptySlots match {
               case Nil =>

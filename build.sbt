@@ -25,7 +25,7 @@ lazy val root = tlCrossRootProject.aggregate(core, jgrapht, benchmarks)
 
 ThisBuild / scalacOptions ++= {
   CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((3, _)) => Seq("-Ykind-projector:underscores")
+    case Some((3, _)) => Seq()
     case Some((2, 12 | 13)) =>
       Seq("-Xsource:3", "-P:kind-projector:underscore-placeholders")
   }
@@ -64,13 +64,11 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(
     name := "graphs-core",
     libraryDependencies ++= Seq(
-      "co.fs2" %% "fs2-core" % "3.3.0",
       "org.typelevel" %%% "cats-core" % catsVersion,
       "org.typelevel" %%% "cats-free" % catsVersion,
       "org.typelevel" %%% "alleycats-laws" % catsVersion,
       "org.typelevel" %%% "cats-effect" % catsEffectVersion,
       "org.scalameta" %%% "munit" % munitVersion % Test,
-      "junit" % "junit" % "4.13.1" % Test,
       "org.typelevel" %%% "scalacheck-effect-munit" % scalaCheckMunitEffect % Test,
       "org.scodec" %%% "scodec-core" % (if (scalaVersion.value.startsWith("2."))
                                           "1.11.9"
@@ -78,25 +76,23 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
     )
   )
 
-lazy val jgrapht = crossProject(JVMPlatform)
-  .crossType(CrossType.Pure)
+lazy val jgrapht = project
   .in(file("jgrapht"))
   .settings(simulacrumSettings, macroSettings)
-  .dependsOn(core % "test->test;compile->compile")
+  .dependsOn(core.jvm % "test->test;compile->compile")
   .settings(
     name := "graphs-jgrapht",
     libraryDependencies ++= Seq("org.jgrapht" % "jgrapht-core" % "1.5.1")
   )
 
-lazy val benchmarks = crossProject(JVMPlatform)
-  .crossType(CrossType.Pure)
+lazy val benchmarks = project
   .in(file("benchmarks"))
   .settings(simulacrumSettings, macroSettings)
   .enablePlugins(JmhPlugin)
-  .dependsOn(core, jgrapht)
+  .dependsOn(core.jvm, jgrapht)
   .settings(
     name := "graphs-benchmarks",
-    libraryDependencies ++= Seq("org.scalameta" %%% "munit" % "0.7.29" % Test)
+    libraryDependencies ++= Seq("org.scalameta" %%% "munit" % munitVersion % Test)
   )
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)

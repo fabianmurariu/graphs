@@ -1,11 +1,8 @@
 package com.github.fabianmurariu.graphs.kernel
 
-import org.scalacheck.Prop._
-import cats.syntax.all.*
-import cats.Monad
+import org.scalacheck.Prop.*
 import munit.ScalaCheckSuite
 import org.scalacheck.Arbitrary
-import scala.reflect.ClassTag
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF.Id
 
@@ -14,7 +11,7 @@ class DirectGraphSuiteV2 extends GraphSuiteV2[Long, String] {
   override def empty = DirectedGraphF.immutableSimpleGraph[Long, String]
 }
 
-abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary: ClassTag](
+abstract class GraphSuiteV2[V: Arbitrary, E: Arbitrary](
 ) extends ScalaCheckSuite {
   def empty: DirectedGraphF.DGraph[V, E]
 

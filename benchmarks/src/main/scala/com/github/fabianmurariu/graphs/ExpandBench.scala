@@ -7,7 +7,7 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDateTime
 import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 import com.github.fabianmurariu.graphs.ldbc.NodesLoader
 import java.nio.file.Paths
