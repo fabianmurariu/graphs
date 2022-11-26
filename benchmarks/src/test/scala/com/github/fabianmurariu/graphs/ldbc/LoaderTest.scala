@@ -1,11 +1,9 @@
 package com.github.fabianmurariu.graphs.ldbc
 
+import com.github.fabianmurariu.graphs.kernel.DirectedGraphF
 import com.github.fabianmurariu.graphs.ldbc.schema.{LdbcEdge, Person}
-import com.github.fabianmurariu.graphs.syntax.*
 
 import java.nio.file.Paths
-import java.time.format.DateTimeFormatter
-import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 
 class LoaderTest extends munit.FunSuite {
 

@@ -1,93 +1,133 @@
-/*
- * Copyright 2022 32Bytes Software LTD
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.github.fabianmurariu.graphs.data.dg
 
-import com.github.fabianmurariu.graphs.data.dg.EntryIndex.ImmutableEntryIndex
-import com.github.fabianmurariu.graphs.data.dg.LookupTable.ImmutableLookupTable
-import com.github.fabianmurariu.graphs.kernel.Graph
+import cats.Monad
+import cats.syntax.all.*
+import com.github.fabianmurariu.graphs.kernel.{Direction, ResultSet, DirectedGraphF as DGF}
+import com.github.fabianmurariu.graphs.kernel.ResultSet.Ids
+import com.github.fabianmurariu.graphs.kernel.Direction.{INTO, OUT}
 
-/** This Graph is unsafe because it leaks internal ids it can be mutable and
-  * does not support concurrent access
-  *
-  * @param vTable
-  * @param store
-  */
-case class DirectedGraph[M[_], G[_, _], V, E](table: M[V], index: G[V, E])
+class DirectedGraph[F[_], +V, +E, VID](
+  table: LookupTable[F, VID],
+  adjStore: GraphStorage[F, V, E, VID],
+  edgeList: => AdjacencyList[E]
+)(implicit val F: Monad[F])
+    extends DGF[F, V, E, VID] {
 
-object DirectedGraph {
-
-  def default[V, E]
-    : DirectedGraph[ImmutableLookupTable, ImmutableEntryIndex, V, E] = empty[
-    LookupTable.ImmutableLookupTable,
-    EntryIndex.ImmutableEntryIndex,
-    V,
-    E
-  ]
-
-  def empty[M[_]: LookupTable, G[_, _]: EntryIndex, V, E] =
-    new DirectedGraph(LookupTable[M].empty[V], EntryIndex[G].empty[V, E])
-
-  implicit def graph[M[_]: LookupTable, GG[_, _]: EntryIndex]
-    : Graph[DirectedGraph[M, GG, *, *]] = new GraphInstance[M, GG]
-
-}
-
-trait AdjacencyStore[E] {
-  def vs: IndexedSeq[Int]
-  def props: IndexedSeq[E]
-
-  def appendPair(v: Int, e: E): AdjacencyStore[E]
-
-  def foldLeft[B](b: B)(f: (B, Int) => B): B
-
-  def remove(v: Int): AdjacencyStore[E]
-
-  def iterator: Iterable[(E, Int)] = props.view.zip(vs)
-  def vertexIds: Iterable[Int] = vs.view
-}
-
-case class VecStore[E](
-  vs: Vector[Int] = Vector.empty,
-  props: Vector[E] = Vector.empty
-) extends AdjacencyStore[E] {
-
-  override def remove(v: Int): AdjacencyStore[E] = {
-    val newVs = vs.filter(_ != v)
-    val newProps = props.view.zipWithIndex.collect {
-      case (e, vi) if vs(vi) != v => e // remove all edges linked to v
-    }.toVector
-    VecStore(newVs, newProps)
+  def removeVertex[VV >: V, EE >: E](id: VID): F[DGF[F, VV, EE, VID]] = {
+    for {
+      (id, tbl) <- table.remove(id)
+      adj <- adjStore.remove(id)
+    } yield new DirectedGraph(tbl, adj, edgeList)
+  }
+  def addEdge[VV >: V, EE >: E](
+    srcId: VID,
+    dstId: VID,
+    edge: EE
+  ): F[DGF[F, VV, EE, VID]] = {
+    for {
+      src <- table.unsafeFind(srcId)
+      dst <- table.unsafeFind(dstId)
+      adj1 <- adjStore.updateEntry(src) {
+        case ent @ Entry(_, _, out, _) =>
+          ent.copy(out = out.appendPair(dst, edge))
+        case _ => throw new IllegalStateException
+      }
+      adj2 <- adj1.updateEntry(dst) {
+        case ent @ Entry(_, _, _, in) =>
+          ent.copy(into = in.appendPair(src, edge))
+        case _ => throw new IllegalStateException
+      }
+    } yield new DirectedGraph(table, adj2, edgeList)
   }
 
-  override def foldLeft[B](b: B)(f: (B, Int) => B): B =
-    vs.foldLeft(b)(f)
+  def addVertex[B >: V <: VID, EE >: E](v: B): F[DGF[F, B, EE, VID]] = {
+    addVertex(v, v)
+  }
+  def addVertex[VV >: V, EE >: E](
+    id: VID,
+    label: VV
+  ): F[DGF[F, VV, EE, VID]] = {
+    for {
+      (physicalId, tbl) <- table.lookupOrCreate(id)
+      adj <- adjStore.addEntry(
+        physicalId,
+        id,
+        Entry(id, label, edgeList, edgeList)
+      )
+    } yield new DirectedGraph(tbl, adj, edgeList)
+  }
 
-  override def appendPair(v: Int, e: E): AdjacencyStore[E] =
-    this.copy(vs = vs :+ v, props :+ e)
+  override def out(v: ResultSet[F, VID]): ResultSet[F, VID] = {
 
+    val physicalIds = v match {
+      case Ids(ids, _) => ids
+      case rs =>
+        for {
+          vIds <- rs.next
+          pIds <- table.findAll(vIds)
+        } yield pIds
+
+    }
+
+    val ids: F[Iterable[Int]] = for {
+      pIds <- physicalIds
+      adjs <- adjStore
+        .entries(pIds)
+        .map(ves =>
+          ves.flatMap {
+            case Entry(_, _, out, _) => out.vertexIds
+            case _                   => Iterable.empty[Int]
+          }
+        )
+    } yield adjs
+
+    ResultSet.Ids(ids, adjStore.lookupVIDs)
+
+  }
+  override def in(v: ResultSet[F, VID]): ResultSet[F, VID] = {
+
+    val physicalIds = v match {
+      case Ids(ids, _) => ids
+      case rs =>
+        for {
+          vIds <- rs.next
+          pIds <- table.findAll(vIds)
+        } yield pIds
+
+    }
+
+    val ids: F[Iterable[Int]] = for {
+      pIds <- physicalIds
+      adjs <- adjStore
+        .entries(pIds)
+        .map(ves =>
+          ves.flatMap {
+            case Entry(_, _, _, in) => in.vertexIds
+            case _                  => Iterable.empty[Int]
+          }
+        )
+    } yield adjs
+
+    ResultSet.Ids(ids, adjStore.lookupVIDs)
+
+  }
+  def neighbours(v: ResultSet[F, VID], d: Direction): ResultSet[F, VID] =
+    d match {
+      case OUT  => out(v)
+      case INTO => in(v)
+    }
+
+  def neighboursE(vs: ResultSet[F, VID], d: Direction): ResultSet[F, (E, VID)] =
+    ???
+
+  def get[VV >: V](id: VID): F[Option[VV]] = {
+    for {
+      physical <- table.find(id)
+      label <- adjStore.entries(physical)
+    } yield label.headOption match {
+      case Some(Entry(_, v, _, _)) => Some(v)
+      case _                       => None
+    }
+  }
+  def vertices: ResultSet[F, V] = adjStore.allEntries
 }
-
-sealed trait VertexEntry[+V, E]
-
-case object Empty extends VertexEntry[Nothing, Nothing]
-
-case class Entry[V, E](
-  id: Int,
-  v: V,
-  out: AdjacencyStore[E],
-  into: AdjacencyStore[E]
-) extends VertexEntry[V, E]

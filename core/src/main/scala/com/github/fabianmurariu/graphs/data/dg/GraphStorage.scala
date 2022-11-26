@@ -1,4 +1,4 @@
-package com.github.fabianmurariu.graphs.data.dg.v2
+package com.github.fabianmurariu.graphs.data.dg
 
 import cats.Monad
 import com.github.fabianmurariu.graphs.kernel.ResultSet

@@ -1,8 +1,8 @@
 package com.github.fabianmurariu.graphs.kernel
 
 import cats.Monad
-import alleycats.std.iterable.*
 import cats.syntax.all.*
+import alleycats.std.iterable.*
 import scala.collection.Factory
 
 sealed trait ResultSet[F[_], +O] extends Any with Serializable {

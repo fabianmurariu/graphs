@@ -1,4 +1,4 @@
-package com.github.fabianmurariu.graphs.data.dg.v2
+package com.github.fabianmurariu.graphs.data.dg
 
 trait AdjacencyList[+E] {
   def vs: IndexedSeq[Int]

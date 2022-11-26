@@ -1,5 +1,6 @@
 package com.github.fabianmurariu.graphs
 
+import com.github.fabianmurariu.graphs.kernel.DirectedGraphF
 import com.github.fabianmurariu.graphs.ldbc.schema.{LdbcEdge, LdbcNode, Person}
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.Scope
@@ -8,7 +9,6 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 
 import java.time.LocalDateTime
-import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF
 import com.github.fabianmurariu.graphs.ldbc.NodesLoader
 import java.nio.file.Paths
 

@@ -2,7 +2,7 @@ package com.github.fabianmurariu.graphs.ldbc
 import java.nio.file.Path
 import java.nio.file.Files
 
-import com.github.fabianmurariu.graphs.kernel.v2.DirectedGraphF.LabeledDGraph64
+import com.github.fabianmurariu.graphs.kernel.DirectedGraphF.LabeledDGraph64
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 

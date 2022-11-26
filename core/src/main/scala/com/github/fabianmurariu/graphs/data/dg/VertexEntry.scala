@@ -1,4 +1,4 @@
-package com.github.fabianmurariu.graphs.data.dg.v2
+package com.github.fabianmurariu.graphs.data.dg
 
 sealed trait VertexEntry[+V, +E, VID]
 
